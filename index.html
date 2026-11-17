@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GestorPro | ERP Restaurante</title>
+<style>
+:root{--navy:#14243a;--navy2:#1d3553;--blue:#2878c7;--bg:#f3f6fa;--card:#fff;--text:#1c2938;--muted:#718096;--line:#e5ebf2;--green:#16865b;--red:#c74747;--amber:#b7791f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:14px Inter,system-ui,Segoe UI,Arial;color:var(--text)}button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:9px;padding:10px 14px;background:var(--blue);color:#fff;font-weight:650}button.secondary{background:#edf2f7;color:#26384c}button.danger{background:#fff0f0;color:#b83232}.shell{display:flex;min-height:100vh}.sidebar{width:250px;background:var(--navy);color:#d9e4f0;padding:22px 14px;flex-shrink:0}.brand{font-size:19px;font-weight:800;color:#fff;padding:5px 10px 24px}.brand small{display:block;color:#8fa7c2;font-size:10px;letter-spacing:1.5px;margin-top:5px}.navlabel{font-size:10px;color:#7f96b2;text-transform:uppercase;letter-spacing:1.4px;padding:13px 10px 7px}.nav button{display:flex;width:100%;text-align:left;background:transparent;color:#c6d3e2;padding:10px;border-radius:8px;margin:2px 0;font-weight:550}.nav button.active,.nav button:hover{background:var(--navy2);color:white}.main{flex:1;min-width:0}.top{height:68px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px}.top strong{font-size:15px}.user{color:var(--muted);font-size:12px}.content{padding:28px;max-width:1450px;margin:auto}.pagehead{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin-bottom:22px}.pagehead h1{margin:0;font-size:25px}.sub{color:var(--muted);margin-top:6px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px}.card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:18px;box-shadow:0 2px 8px #15283c08}.kpi small{color:var(--muted);display:block}.kpi b{display:block;font-size:25px;margin:9px 0 4px}.kpi em{font-style:normal;color:var(--green);font-size:11px}.section{margin-top:18px}.section h3{font-size:15px;margin:0 0 13px}.tablewrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:collapse;min-width:650px}th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);white-space:nowrap}th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:#f9fbfd}td{font-size:13px}.pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#edf4ff;color:#2765a2;font-size:11px}.pill.green{background:#e8f7ef;color:#16734e}.pill.red{background:#fff0f0;color:#b83232}.pill.amber{background:#fff6e5;color:#9a650d}.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:13px}.toolbar input,.toolbar select{padding:10px;border:1px solid var(--line);border-radius:9px;background:white;min-width:180px}.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid #dce4ed;border-radius:8px;padding:10px;background:white}.field.full{grid-column:1/-1}.modal{position:fixed;inset:0;background:#0b1a2b88;display:none;align-items:center;justify-content:center;padding:18px;z-index:10}.modal.open{display:flex}.dialog{background:white;border-radius:15px;padding:22px;width:min(600px,100%);max-height:90vh;overflow:auto}.dialog h2{margin:0 0 18px}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.empty{padding:28px;text-align:center;color:var(--muted)}.notice{background:#eef6ff;border:1px solid #d7e8fb;padding:13px;border-radius:10px;color:#315b83;margin-bottom:16px}.twocol{display:grid;grid-template-columns:1.3fr 1fr;gap:15px}.chart{height:190px;display:flex;align-items:end;gap:12px;padding:12px 10px 0}.bar{flex:1;background:linear-gradient(180deg,#4597df,#246db6);border-radius:6px 6px 0 0;min-width:15px;position:relative}.bar span{position:absolute;bottom:-23px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted)}.hide{display:none!important}
+@media(max-width:900px){.sidebar{width:205px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.content{padding:18px}.twocol{grid-template-columns:1fr}}
+@media(max-width:620px){.shell{display:block}.sidebar{width:100%;padding:12px}.brand{padding:4px 8px 12px}.nav{display:flex;overflow:auto;gap:5px}.navlabel{display:none}.nav button{white-space:nowrap;width:auto;font-size:12px;padding:8px}.top{padding:0 15px}.content{padding:15px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pagehead{display:block}.pagehead button{margin-top:12px}.formgrid{grid-template-columns:1fr}.field.full{grid-column:auto}}
+</style></head>
+<body><div class="shell">
+<aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav">
+<button data-page="dashboard" class="active">▦ &nbsp; Dashboard</button>
+<button data-page="cadastros">♙ &nbsp; Cadastros</button>
+<button data-page="inventario">▤ &nbsp; Inventário</button>
+<button data-page="estoque">▣ &nbsp; Estoque</button>
+<button data-page="avarias">♲ &nbsp; Avarias</button>
+<button data-page="compras">🛒 &nbsp; Compras</button>
+<button data-page="cotacoes">⇄ &nbsp; Cotações</button>
+<button data-page="recebimento">▣ &nbsp; Recebimento</button>
+<button data-page="metas">◎ &nbsp; Metas</button>
+<button data-page="temperaturas">♨ &nbsp; Temperaturas</button>
+<button data-page="receitas">♧ &nbsp; Receitas</button>
+</nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o MVP</button></nav></aside>
+<main class="main"><header class="top"><strong id="topTitle">Dashboard gerencial</strong><span class="user">Unidade principal　|　Administrador demonstração</span></header><div class="content" id="app"></div></main></div>
+<div class="modal" id="modal"><div class="dialog"><h2 id="modalTitle">Novo registro</h2><form id="modalForm"><div id="modalFields" class="formgrid"></div><div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancelar</button><button type="submit">Salvar registro</button></div></form></div></div>
+<script>
+const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const today=()=>new Date().toISOString().slice(0,10);
+const seed={
+products:[{id:1,code:'INS-001',name:'Arroz tipo 1',unit:'kg',category:'Mercearia',cost:6.5,stock:100,min:20},{id:2,code:'INS-002',name:'Feijão carioca',unit:'kg',category:'Mercearia',cost:8.2,stock:50,min:15},{id:3,code:'INS-003',name:'Óleo de soja',unit:'L',category:'Óleos',cost:7.9,stock:30,min:10}],
+suppliers:[{id:1,name:'Distribuidora Exemplo',email:'compras@exemplo.com',phone:'(27) 3000-0000'}],
+employees:[],users:[],external:[],structures:[],agreements:[],services:[],
+movements:[],losses:[],orders:[],quotes:[],receipts:[],inventory:[],goals:[],temps:[],recipes:[]
+};
+let db=JSON.parse(localStorage.getItem('gestorpro_db')||'null')||seed;
+function save(){localStorage.setItem('gestorpro_db',JSON.stringify(db))}
+let page='dashboard';
+const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',inventario:'Inventário',estoque:'Controle de estoque',avarias:'Avarias e desperdícios',compras:'Compras',cotacoes:'Cotação de compras',recebimento:'Recebimento de mercadorias',metas:'Metas',temperaturas:'Acompanhamento nutricional',receitas:'Cadastro de receitas',ajuda:'Sobre esta versão'};
+document.getElementById('nav').addEventListener('click',e=>{let b=e.target.closest('button[data-page]');if(b)go(b.dataset.page)});
+function go(p){page=p;document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===p));document.getElementById('topTitle').textContent=titles[p];render()}
+function head(title,desc,button='',action=''){return `<div class="pagehead"><div><h1>${title}</h1><div class="sub">${desc}</div></div>${button?`<button onclick="${action}">${button}</button>`:''}</div>`}
+function table(headers,rows){return `<div class="tablewrap"><table><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows||''}</tbody></table>${rows?'':'<div class="empty">Nenhum registro cadastrado.</div>'}</div>`}
+function render(){
+const el=document.getElementById('app');
+if(page==='dashboard'){
+let stockValue=db.products.reduce((a,p)=>a+p.stock*p.cost,0),loss=db.losses.reduce((a,x)=>a+x.qty*x.cost,0),pending=db.orders.filter(x=>x.status==='Aguardando aprovação').length,low=db.products.filter(x=>x.stock<=x.min).length;
+el.innerHTML=head('Visão geral','Acompanhe os principais indicadores da unidade')+`<div class="grid">
+<div class="card kpi"><small>Valor estimado do estoque</small><b>${money(stockValue)}</b><em>Baseado no custo médio</em></div>
+<div class="card kpi"><small>Avarias registradas</small><b>${money(loss)}</b><em>Acumulado nos registros</em></div>
+<div class="card kpi"><small>Pedidos aguardando aprovação</small><b>${pending}</b><em>Compras pendentes</em></div>
+<div class="card kpi"><small>Produtos no mínimo</small><b>${low}</b><em>${low?'Requer atenção':'Estoque dentro dos mínimos'}</em></div></div>
+<div class="twocol section"><div class="card"><h3>Posição de estoque</h3>${table(['Produto','Saldo','Custo médio','Valor total'],db.products.map(p=>`<tr><td>${p.name}</td><td>${p.stock} ${p.unit}</td><td>${money(p.cost)}</td><td>${money(p.stock*p.cost)}</td></tr>`).join(''))}</div><div class="card"><h3>Alertas operacionais</h3><p>${low?`<span class="pill amber">${low} produto(s) no estoque mínimo</span>`:'<span class="pill green">Sem alertas de estoque mínimo</span>'}</p><p><span class="pill">${db.quotes.filter(q=>q.status!=='Finalizado').length} cotação(ões) em aberto</span></p><p><span class="pill">${db.temps.filter(t=>t.status==='Fora do parâmetro').length} medição(ões) fora do parâmetro</span></p><p class="sub">Os dados exibidos são os lançamentos desta demonstração local.</p></div></div>`;
+}
+if(page==='cadastros'){
+let tabs=[['products','Produtos'],['suppliers','Fornecedores'],['employees','Funcionários'],['users','Usuários'],['external','Usuários externos'],['structures','Estruturas'],['agreements','Convênios'],['services','Serviços']];
+let tab=window.cadTab||'products',arr=db[tab],labels={products:'Produtos',suppliers:'Fornecedores',employees:'Funcionários',users:'Usuários',external:'Usuários externos',structures:'Estruturas',agreements:'Convênios',services:'Serviços'};
+let rows=arr.map(x=>`<tr><td>${x.code||x.name||x.fullname||x.email||x.title||'-'}</td><td>${x.name||x.fullname||x.email||x.title||'-'}</td><td>${x.email||x.unit||x.category||x.role||'-'}</td><td><button class="secondary" onclick="removeItem('${tab}',${x.id})">Excluir</button></td></tr>`).join('');
+el.innerHTML=head('Cadastros','Cadastros centrais utilizados pelos demais processos','+ Novo cadastro',`newRecord('${tab}')`)+`<div class="toolbar">${tabs.map(t=>`<button class="${tab===t[0]?'':'secondary'}" onclick="window.cadTab='${t[0]}';render()">${t[1]}</button>`).join('')}</div>`+table(['Identificação','Nome / descrição','Informação','Ação'],rows);
+}
+if(page==='estoque'){
+let rows=db.products.map(p=>`<tr><td>${p.code}</td><td>${p.name}</td><td>${p.stock} ${p.unit}</td><td>${money(p.cost)}</td><td>${money(p.stock*p.cost)}</td><td>${p.stock<=p.min?'<span class="pill amber">Estoque mínimo</span>':'<span class="pill green">Normal</span>'}</td></tr>`).join('');
+el.innerHTML=head('Controle de estoque','Saldo, custo médio ponderado e movimentações','+ Entrada / acerto',`newRecord('movement')`)+`<div class="notice">O custo médio é recalculado nas entradas: (saldo anterior × custo anterior + quantidade recebida × custo de entrada) ÷ saldo final.</div>`+table(['Código','Produto','Saldo','Custo médio','Valor total','Situação'],rows)+`<div class="section"><h3>Últimas movimentações</h3>`+table(['Data','Produto','Tipo','Quantidade','Custo unitário'],db.movements.slice(-10).reverse().map(m=>`<tr><td>${m.date}</td><td>${m.productName}</td><td>${m.type}</td><td>${m.qty}</td><td>${money(m.cost)}</td></tr>`).join(''))+'</div>';
+}
+if(page==='avarias'){
+let total=db.losses.reduce((a,x)=>a+x.qty*x.cost,0);
+el.innerHTML=head('Avarias e desperdícios','Registre perdas e acompanhe seu impacto financeiro','+ Registrar avaria',`newRecord('loss')`)+`<div class="grid"><div class="card kpi"><small>Valor total registrado</small><b>${money(total)}</b></div><div class="card kpi"><small>Registros</small><b>${db.losses.length}</b></div></div><div class="section">`+table(['Data','Produto','Quantidade','Custo unitário','Valor total','Motivo'],db.losses.map(x=>`<tr><td>${x.date}</td><td>${x.productName}</td><td>${x.qty}</td><td>${money(x.cost)}</td><td>${money(x.qty*x.cost)}</td><td>${x.reason}</td></tr>`).join(''))+'</div>';
+}
+if(page==='compras'){
+el.innerHTML=head('Pedidos de compra','Pré-pedidos, aprovação e acompanhamento','+ Novo pedido',`newRecord('order')`)+table(['Número','Fornecedor','Data','Valor','Status'],db.orders.map(x=>`<tr><td>${x.number}</td><td>${x.supplierName}</td><td>${x.date}</td><td>${money(x.total)}</td><td><span class="pill ${x.status==='Aprovado'?'green':'amber'}">${x.status}</span></td></tr>`).join(''));
+}
+if(page==='cotacoes'){
+el.innerHTML=head('Cotação de compras','Registre propostas e selecione fornecedores vencedores','+ Abrir cotação',`newRecord('quote')`)+`<div class="notice">Protótipo: o cadastro e o acompanhamento de cotações funcionam localmente. O envio real de e-mails e os links externos individuais serão conectados ao backend seguro na próxima etapa.</div>`+table(['Cotação','Descrição','Prazo','Fornecedores','Status'],db.quotes.map(x=>`<tr><td>${x.number}</td><td>${x.description}</td><td>${x.deadline}</td><td>${x.suppliers}</td><td><span class="pill">${x.status}</span></td></tr>`).join(''));
+}
+if(page==='recebimento'){
+el.innerHTML=head('Recebimento de mercadorias','Conferência manual dos itens do pedido','+ Iniciar recebimento',`newRecord('receipt')`)+table(['Pedido','Fornecedor','Data','Itens conferidos','Status','Divergência'],db.receipts.map(x=>`<tr><td>${x.order}</td><td>${x.supplier}</td><td>${x.date}</td><td>${x.items}</td><td><span class="pill green">${x.status}</span></td><td>${x.divergence}</td></tr>`).join(''));
+}
+if(page==='inventario'){
+el.innerHTML=head('Inventário','Contagem física e conferência do saldo do estoque','+ Nova contagem',`newRecord('inventory')`)+`<div class="notice">A importação de coletor e o fluxo de gravação definitiva serão conectados ao backend. Esta versão registra contagens manuais de demonstração.</div>`+table(['Data','Produto','Saldo sistema','Contagem','Diferença'],db.inventory.map(x=>`<tr><td>${x.date}</td><td>${x.product}</td><td>${x.system}</td><td>${x.count}</td><td>${x.count-x.system}</td></tr>`).join(''));
+}
+if(page==='metas'){
+el.innerHTML=head('Apuração e acompanhamento de metas','Defina indicadores e acompanhe os resultados','+ Cadastrar meta',`newRecord('goal')`)+table(['Meta','Indicador','Alvo','Realizado','Prazo','Status'],db.goals.map(x=>`<tr><td>${x.name}</td><td>${x.metric}</td><td>${x.target}</td><td>${x.actual||'—'}</td><td>${x.deadline}</td><td><span class="pill">${x.status}</span></td></tr>`).join(''));
+}
+if(page==='temperaturas'){
+el.innerHTML=head('Acompanhamento nutricional','Registros de temperatura e ações corretivas','+ Registrar medição',`newRecord('temp')`)+`<div class="notice">Configure os limites aplicáveis ao seu procedimento de segurança dos alimentos. O protótipo não define limites sanitários automaticamente.</div>`+table(['Data/hora','Ponto de medição','Temperatura','Responsável','Situação','Ação corretiva'],db.temps.map(x=>`<tr><td>${x.datetime}</td><td>${x.point}</td><td>${x.temperature} °C</td><td>${x.person}</td><td><span class="pill ${x.status==='Conforme'?'green':'red'}">${x.status}</span></td><td>${x.action||'—'}</td></tr>`).join(''));
+}
+if(page==='receitas'){
+el.innerHTML=head('Cadastro de receitas','Ficha técnica, rendimento e custo proporcional','+ Nova receita',`newRecord('recipe')`)+table(['Receita','Rendimento','Custo total','Custo por unidade'],db.recipes.map(x=>`<tr><td>${x.name}</td><td>${x.yield} ${x.unit}</td><td>${money(x.total)}</td><td>${money(x.total/x.yield)}</td></tr>`).join(''));
+}
+if(page==='ajuda'){
+el.innerHTML=head('Sobre esta versão','Primeiro protótipo navegável do GestorPro')+`<div class="card"><h3>O que já funciona neste protótipo</h3><ul><li>Navegação entre os módulos.</li><li>Cadastro local de produtos e fornecedores.</li><li>Entradas e acertos com cálculo de custo médio ponderado.</li><li>Registro de avarias com baixa de estoque.</li><li>Cadastros de pedidos, cotações, inventário, recebimento, metas, temperaturas e receitas.</li><li>Persistência de demonstração no navegador via armazenamento local.</li></ul><h3>O que ainda exige backend antes do uso real</h3><ul><li>Login real e permissões por perfil.</li><li>Banco PostgreSQL e políticas de segurança.</li><li>Envio de e-mails e links externos individuais.</li><li>Transações atômicas, auditoria e backup.</li><li>Importação de coletor e integração com sistemas externos.</li></ul><p class="notice">Não use dados reais nem opere compras/estoque de produção nesta demonstração. Os dados ficam apenas neste navegador.</p></div>`;
+}
+}
+function newRecord(type){
+let fields=[],title='';
+const productOpts=db.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+const supplierOpts=db.suppliers.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+const f=(name,label,kind='text',opts='')=>fields.push({name,label,kind,opts});
+if(type==='products'){title='Novo produto';f('code','Código');f('name','Descrição');f('unit','Unidade');f('category','Categoria');f('cost','Custo inicial','number');f('stock','Saldo inicial','number');f('min','Estoque mínimo','number')}
+if(type==='suppliers'){title='Novo fornecedor';f('name','Razão social / nome');f('email','E-mail','email');f('phone','Telefone')}
+if(type==='employees'||type==='users'||type==='external'){title='Novo '+({employees:'funcionário',users:'usuário',external:'usuário externo'}[type]);f(type==='employees'?'fullname':'name','Nome');f('email','E-mail','email');f('role','Função / perfil')}
+if(type==='structures'||type==='agreements'||type==='services'){title='Novo cadastro';f('name','Nome / descrição');f('title','Detalhes')}
+if(type==='movement'){title='Entrada ou acerto de estoque';f('productId','Produto','select',productOpts);f('qty','Quantidade recebida','number');f('cost','Custo unitário de entrada (R$)','number');f('type','Tipo','select','<option>Entrada</option><option>Acerto positivo</option><option>Acerto negativo</option>')}
+if(type==='loss'){title='Registrar avaria';f('productId','Produto','select',productOpts);f('qty','Quantidade perdida','number');f('reason','Motivo')}
+if(type==='order'){title='Novo pré-pedido';f('supplierId','Fornecedor','select',supplierOpts);f('number','Número do pedido');f('total','Valor total (R$)','number');f('date','Data','date')}
+if(type==='quote'){title='Abrir cotação';f('number','Número da cotação');f('description','Descrição');f('deadline','Prazo de encerramento','date');f('suppliers','Fornecedores convidados (quantidade)','number');f('status','Status','select','<option>Prazo de encerramento</option><option>Em cotação</option><option>Em andamento</option><option>Seleção de vencedores</option><option>Finalizado</option>')}
+if(type==='receipt'){title='Registrar recebimento';f('order','Número do pedido');f('supplier','Fornecedor');f('date','Data','date');f('items','Itens conferidos');f('divergence','Divergência');f('status','Status','select','<option>Concluído</option><option>Parcial</option>')}
+if(type==='inventory'){title='Registrar contagem manual';f('product','Produto');f('system','Saldo do sistema','number');f('count','Quantidade contada','number');f('date','Data','date')}
+if(type==='goal'){title='Cadastrar meta';f('name','Nome da meta');f('metric','Indicador');f('target','Meta estabelecida');f('actual','Realizado');f('deadline','Prazo','date');f('status','Status','select','<option>Em andamento</option><option>Atingida</option><option>Atrasada</option>')}
+if(type==='temp'){title='Registrar temperatura';f('point','Ponto de medição','select','<option>Fritadeira</option><option>Buffet quente</option><option>Salada</option><option>Sobremesa</option>');f('temperature','Temperatura °C','number');f('person','Responsável');f('status','Situação','select','<option>Conforme</option><option>Fora do parâmetro</option>');f('action','Ação corretiva');}
+if(type==='recipe'){title='Cadastrar receita';f('name','Nome da receita');f('yield','Rendimento numérico','number');f('unit','Unidade de rendimento');f('total','Custo total da receita (R$)','number')}
+window.formType=type;document.getElementById('modalTitle').textContent=title;
+document.getElementById('modalFields').innerHTML=fields.map(x=>`<div class="field"><label>${x.label}</label>${x.kind==='select'?`<select name="${x.name}" required>${x.opts}</select>`:`<input name="${x.name}" type="${x.kind}" ${['number'].includes(x.kind)?'step="0.001" min="0"':''} ${x.name==='date'?'value="'+today()+'"':''} required>`}</div>`).join('');
+document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+document.getElementById('modalForm').addEventListener('submit',e=>{
+e.preventDefault();let d=Object.fromEntries(new FormData(e.target).entries()),t=window.formType;d.id=Date.now();
+if(t==='products'){d.cost=+d.cost;d.stock=+d.stock;d.min=+d.min;db.products.push(d)}
+else if(t==='suppliers'){db.suppliers.push(d)}
+else if(['employees','users','external','structures','agreements','services'].includes(t)){db[t].push(d)}
+else if(t==='movement'){let p=db.products.find(x=>x.id==d.productId);d.qty=+d.qty;d.cost=+d.cost;d.date=today();d.productName=p.name;let old=p.stock,delta=d.type==='Acerto negativo'?-d.qty:d.qty;if(delta<0&&Math.abs(delta)>old){alert('Saldo insuficiente para o acerto negativo.');return}let newStock=old+delta;if(delta>0)p.cost=((old*p.cost)+(d.qty*d.cost))/newStock;p.stock=newStock;db.movements.push(d)}
+else if(t==='loss'){let p=db.products.find(x=>x.id==d.productId);d.qty=+d.qty;d.cost=p.cost;d.productName=p.name;d.date=today();if(d.qty>p.stock){alert('Quantidade maior que o saldo disponível.');return}p.stock-=d.qty;db.losses.push(d);db.movements.push({date:today(),productName:p.name,type:'Saída por avaria',qty:-d.qty,cost:p.cost})}
+else if(t==='order'){let s=db.suppliers.find(x=>x.id==d.supplierId);d.supplierName=s?.name||'Fornecedor';d.total=+d.total;d.status='Aguardando aprovação';db.orders.push(d)}
+else if(t==='quote'){d.suppliers=+d.suppliers;db.quotes.push(d)}
+else if(t==='receipt'){db.receipts.push(d)}
+else if(t==='inventory'){d.system=+d.system;d.count=+d.count;d.date=d.date||today();db.inventory.push(d)}
+else if(t==='goal'){db.goals.push(d)}
+else if(t==='temp'){d.temperature=+d.temperature;d.datetime=new Date().toLocaleString('pt-BR');db.temps.push(d)}
+else if(t==='recipe'){d.yield=+d.yield;d.total=+d.total;db.recipes.push(d)}
+save();closeModal();render();
+});
+function removeItem(tab,id){if(confirm('Excluir este cadastro?')){db[tab]=db[tab].filter(x=>x.id!==id);save();render()}}
+render();
+</script></body></html>
