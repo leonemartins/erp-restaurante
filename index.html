@@ -31,7 +31,7 @@ document.addEventListener('submit',function(e){if(e.target&&e.target.id==='authF
 window.addEventListener('error',function(e){var el=document.getElementById('authStatus');if(el&&!window.__gestorProModuleLoaded){el.textContent='O sistema não conseguiu carregar o módulo de acesso. Atualize o arquivo index.html no GitHub e tente novamente. Detalhe: '+(e.message||'erro de carregamento');el.className='status red';}});
 window.addEventListener('unhandledrejection',function(e){var el=document.getElementById('authStatus');if(el){el.textContent='Falha de comunicação: '+(e.reason&&e.reason.message?e.reason.message:String(e.reason));el.className='status red';}});
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script type="module">
 if (!window.supabase || typeof window.supabase.createClient !== 'function') { throw new Error('Biblioteca Supabase não carregada.'); }
 const createClient = window.supabase.createClient;
@@ -72,3 +72,4 @@ const configs={
  employees:{table:'employees',title:'Funcionários',fields:[['full_name','Nome completo','text',true],['employee_code','Matrícula / código (opcional)','text',false],['email','E-mail','email',false],['phone','Telefone','text',false],['position_id','Cargo','select',false],['hire_date','Data de admissão','date',false],['employment_status','Situação','select',true,['active','inactive','on_leave']]],cols:[['employee_code','Matrícula'],['full_name','Funcionário'],['email','E-mail'],['employment_status','Situação']]},
  external_users:{table:'external_users',title:'Usuários externos',fields:[['name','Nome / empresa','text',true],['organization','Organização','text',false],['email','E-mail','email',false],['phone','Telefone','text',false],['access_type','Tipo de acesso / vínculo','text',false],['notes','Observações','text',false]],cols:[['name','Nome'],['organization','Organização'],['email','E-mail'],['access_type','Vínculo']]},
  structures:{table:'job_positions',title:'Estruturas e cargos',fields:[['title','Cargo / função','text',true],['department','Setor / departamento','text',false],['description','Descrição','text',false]],cols:[['title','Cargo / função'],['department','Setor'],['description','Descrição']]},
+ agreements:{table:'
