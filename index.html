@@ -20,7 +20,7 @@ rap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12p
  </div></div>
 <div id="setupView" class="authwrap hidden"><div class="authcard"><div class="authbrand">GESTORPRO<small>CONFIGURAÇÃO INICIAL</small></div><h2>Cadastre sua empresa</h2><p class="muted">Este será o ambiente administrativo inicial da sua organização.</p><form id="setupForm"><div class="field"><label>Nome da empresa</label><input id="companyName" required maxlength="120" placeholder="Ex.: Minha Rede de Restaurantes"></div><div class="field"><label>Nome da primeira unidade</label><input id="unitName" required maxlength="120" placeholder="Ex.: Unidade Matriz"></div><button type="submit">Criar empresa e unidade</button></form><div id="setupStatus" class="status" role="status"></div><button class="secondary" id="setupLogout" type="button">Sair</button></div></div>
 <div id="appView" class="shell hidden">
- <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
+ <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
  <main class="main"><header class="top"><strong id="topTitle">Dashboard gerencial</strong><div class="topright"><select id="unitSelect" aria-label="Selecionar unidade"></select><span id="userLabel"></span><button class="secondary" id="logoutBtn">Sair</button></div></header><div class="content" id="app"></div></main>
 </div>
 <script>
@@ -231,7 +231,75 @@ async function renderPurchases(app){
  }
 }
 
+
+async function renderGoodsReceipts(app){
+ const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+ const statusLabel={in_progress:'Em andamento',pending_validation:'Aguardando validação',finalized:'Finalizado',cancelled:'Cancelado'};
+ const [{data:orders,error:oe},{data:receipts,error:re}]=await Promise.all([
+  supabase.from('purchase_orders').select('id,order_number,status,total_amount,created_at,suppliers(name)').eq('unit_id',unitId).in('status',['approved','partially_received']).order('created_at',{ascending:false}).limit(100),
+  supabase.from('goods_receipts').select('id,order_id,status,received_at,notes,validated_at,purchase_orders(order_number,suppliers(name))').eq('unit_id',unitId).order('received_at',{ascending:false}).limit(100)
+ ]);
+ if(oe||re){app.innerHTML='<div class="notice">Erro ao carregar recebimentos: '+safe((oe||re).message)+'</div>';return}
+ const orderOpts=(orders||[]).map(o=>'<option value="'+o.id+'">Pedido #'+safe(o.order_number)+' — '+safe(o.suppliers?.name||'Fornecedor')+' — '+money(o.total_amount)+'</option>').join('');
+ const rows=(receipts||[]).map(r=>'<tr><td>#'+safe(r.purchase_orders?.order_number||'—')+'</td><td>'+safe(r.purchase_orders?.suppliers?.name||'Fornecedor')+'</td><td>'+safe(statusLabel[r.status]||r.status)+'</td><td>'+new Date(r.received_at).toLocaleString('pt-BR')+'</td><td>'+(r.validated_at?'Validado':'—')+'</td><td><button class="secondary" data-receipt-open="'+r.id+'">Abrir</button></td></tr>').join('');
+ app.innerHTML='<div class="pagehead"><div><h1>Recebimento de mercadorias</h1><div class="sub">Conferência de entregas vinculada aos pedidos aprovados — '+safe(units.find(u=>u.id===unitId)?.name||'unidade')+'</div></div></div>'+
+ '<div class="grid section" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="card"><h3>Iniciar recebimento</h3>'+(orderOpts?'<form id="receiptStartForm"><div class="field"><label>Pedido aprovado</label><select name="order_id" required>'+orderOpts+'</select></div><div class="field"><label>Observações / nota fiscal</label><textarea name="notes" rows="3" placeholder="Número da nota fiscal, transportadora ou observações"></textarea></div><button type="submit">Iniciar conferência</button><div id="receiptStartStatus" class="status"></div></form>':'<div class="notice">Não há pedidos aprovados aguardando recebimento nesta unidade.</div>')+'</div><div class="card"><h3>Como funciona</h3><p>O funcionário registra as quantidades efetivamente entregues e informa justificativas para faltas ou excessos.</p><p class="notice">O envio para validação não altera o estoque. A validação é restrita a gerente ou administrador. A integração da finalização com a entrada definitiva no estoque será concluída na próxima etapa.</p></div></div>'+
+ '<div class="card section"><h3>Recebimentos da unidade</h3>'+table(['Pedido','Fornecedor','Status','Data','Validação','Ação'],rows)+'</div><div id="receiptDetail" class="section"></div>';
+ const start=$('receiptStartForm');
+ if(start)start.addEventListener('submit',async e=>{
+  e.preventDefault();const fd=new FormData(start);const orderId=String(fd.get('order_id'));
+  const {data:order,error:oe2}=await supabase.from('purchase_orders').select('id,company_id,unit_id,status').eq('id',orderId).eq('unit_id',unitId).single();
+  if(oe2||!order){$('receiptStartStatus').textContent='Não foi possível localizar o pedido.'; $('receiptStartStatus').className='status red';return}
+  if(!['approved','partially_received'].includes(order.status)){$('receiptStartStatus').textContent='Somente pedidos aprovados podem ser recebidos.';$('receiptStartStatus').className='status red';return}
+  const {data:items,error:ie}=await supabase.from('purchase_order_items').select('id,product_id,quantity,unit_price,products(name,unit_measure)').eq('order_id',orderId);
+  if(ie||!items?.length){$('receiptStartStatus').textContent='Pedido sem itens ou erro ao consultar itens.';$('receiptStartStatus').className='status red';return}
+  const {data:receipt,error:ce}=await supabase.from('goods_receipts').insert({company_id:order.company_id,unit_id:order.unit_id,order_id:order.id,notes:String(fd.get('notes')||'').trim()}).select('id').single();
+  if(ce||!receipt){$('receiptStartStatus').textContent='Erro ao iniciar recebimento: '+(ce?.message||'sem retorno');$('receiptStartStatus').className='status red';return}
+  const payload=items.map(it=>({receipt_id:receipt.id,order_item_id:it.id,ordered_quantity:it.quantity,received_quantity:0}));
+  const {error:ii}=await supabase.from('goods_receipt_items').insert(payload);
+  if(ii){$('receiptStartStatus').textContent='Recebimento criado, mas houve erro ao criar os itens: '+ii.message;$('receiptStartStatus').className='status red';return}
+  await renderGoodsReceipts(app);await openReceipt(receipt.id);
+ });
+ app.querySelectorAll('[data-receipt-open]').forEach(b=>b.addEventListener('click',()=>openReceipt(b.dataset.receiptOpen)));
+ async function openReceipt(id){
+  const host=$('receiptDetail');if(!host)return;host.innerHTML='<div class="notice">Carregando conferência...</div>';
+  const [{data:r,error:er},{data:items,error:ei}]=await Promise.all([
+   supabase.from('goods_receipts').select('id,status,notes,received_at,validated_at,order_id,purchase_orders(order_number,suppliers(name))').eq('id',id).eq('unit_id',unitId).single(),
+   supabase.from('goods_receipt_items').select('id,order_item_id,ordered_quantity,received_quantity,discrepancy_reason,purchase_order_items(product_id,unit_price,products(name,unit_measure))').eq('receipt_id',id)
+  ]);
+  if(er||ei||!r){host.innerHTML='<div class="notice">Erro ao abrir recebimento: '+safe((er||ei)?.message||'registro não encontrado')+'</div>';return}
+  const editable=r.status==='in_progress';
+  host.innerHTML='<div class="card"><div class="pagehead"><div><h3>Conferência do pedido #'+safe(r.purchase_orders?.order_number||'')+'</h3><div class="sub">'+safe(r.purchase_orders?.suppliers?.name||'Fornecedor')+' · '+safe(statusLabel[r.status]||r.status)+'</div></div></div><div class="field"><label>Observações</label><textarea id="receiptNotes" rows="2" '+(editable?'':'disabled')+'>'+safe(r.notes||'')+'</textarea></div>'+
+  '<div class="tablewrap"><table><thead><tr><th>Produto</th><th>Pedido</th><th>Recebido</th><th>Diferença / justificativa</th></tr></thead><tbody>'+(items||[]).map(it=>'<tr><td>'+safe(it.purchase_order_items?.products?.name||'Produto')+' ('+safe(it.purchase_order_items?.products?.unit_measure||'')+')</td><td>'+Number(it.ordered_quantity).toLocaleString('pt-BR')+'</td><td><input type="number" min="0" step="0.001" style="min-width:90px" data-received-id="'+it.id+'" value="'+safe(it.received_quantity)+'" '+(editable?'':'disabled')+'></td><td><input type="text" style="min-width:150px" data-reason-id="'+it.id+'" value="'+safe(it.discrepancy_reason||'')+'" placeholder="Obrigatória se houver divergência" '+(editable?'':'disabled')+'></td></tr>').join('')+'</tbody></table></div>'+
+  (editable?'<div class="authactions"><button id="saveReceiptItems">Salvar conferência</button><button class="secondary" id="submitReceipt">Enviar para validação</button></div>':'')+
+  (r.status==='pending_validation'&&!r.validated_at?'<div class="authactions"><button id="validateReceipt">Validar recebimento (gerente/admin)</button></div>':'')+
+  (r.validated_at?'<div class="notice">Recebimento validado em '+new Date(r.validated_at).toLocaleString('pt-BR')+'. A entrada definitiva no estoque ainda depende da etapa de finalização.</div>':'')+
+  '<div id="receiptDetailStatus" class="status"></div></div>';
+  const save=async()=>{
+   const note=$('receiptNotes').value;
+   const {error:ne}=await supabase.from('goods_receipts').update({notes:note}).eq('id',id).eq('status','in_progress');
+   if(ne)return ne.message;
+   for(const input of host.querySelectorAll('[data-received-id]')){
+    const itemId=input.dataset.receivedId,qty=Number(input.value);
+    const reason=host.querySelector('[data-reason-id="'+itemId+'"]').value.trim();
+    if(!Number.isFinite(qty)||qty<0)return 'Informe quantidades recebidas válidas.';
+    const ordered=Number((items||[]).find(x=>x.id===itemId)?.ordered_quantity||0);
+    if(qty!==ordered&&!reason)return 'Informe a justificativa para falta ou excesso em todos os itens divergentes.';
+    const {error}=await supabase.from('goods_receipt_items').update({received_quantity:qty,discrepancy_reason:reason||null}).eq('id',itemId).eq('receipt_id',id);
+    if(error)return error.message;
+   }
+   return null;
+  };
+  if(editable){
+   $('saveReceiptItems').onclick=async()=>{const err=await save();const el=$('receiptDetailStatus');el.textContent=err?'Erro ao salvar: '+err:'Conferência salva.';el.className='status '+(err?'red':'green')};
+   $('submitReceipt').onclick=async()=>{const err=await save();if(err){$('receiptDetailStatus').textContent='Erro: '+err;$('receiptDetailStatus').className='status red';return}const {error}=await supabase.rpc('submit_goods_receipt_for_validation',{p_receipt_id:id});if(error){$('receiptDetailStatus').textContent='Não foi possível enviar para validação: '+error.message;$('receiptDetailStatus').className='status red';return}await renderGoodsReceipts(app);await openReceipt(id)};
+  }
+  if(r.status==='pending_validation'&&!r.validated_at)$('validateReceipt').onclick=async()=>{if(!confirm('Confirmar a validação deste recebimento? Somente gerente ou administrador pode realizar esta ação.'))return;const {error}=await supabase.rpc('validate_goods_receipt',{p_receipt_id:id});if(error){$('receiptDetailStatus').textContent='Não foi possível validar: '+error.message;$('receiptDetailStatus').className='status red';return}await renderGoodsReceipts(app);await openReceipt(id)};
+ }
+}
+
 if(currentPage==='compras'){await renderPurchases(app);return}
+if(currentPage==='recebimentos'){await renderGoodsReceipts(app);return}
 if(currentPage==='operacao'){app.innerHTML='<div class="pagehead"><div><h1>Operações</h1><div class="sub">Inventários, recebimentos, qualidade, RH e manutenção.</div></div></div><div class="notice">As tabelas e regras do backend estão preparadas; as telas operacionais serão conectadas módulo a módulo e testadas antes do uso real.</div>';return}
 if(currentPage==='ajuda'){app.innerHTML='<div class="card"><h2>GestorPro conectado ao Supabase</h2><p>Login real, sessão autenticada, empresa, unidade e leitura do dashboard estão integrados nesta primeira etapa.</p><p class="notice">Ainda não é uma versão pronta para operação: cadastros, estoque, compras, recebimento e demais processos precisam de suas telas de gravação, validação e testes.</p></div>';return}}
 supabase.auth.onAuthStateChange((_event,s)=>{if(!s){session=null;show('authView')} });
