@@ -31,7 +31,8 @@ document.addEventListener('submit',function(e){if(e.target&&e.target.id==='authF
 window.addEventListener('error',function(e){var el=document.getElementById('authStatus');if(el&&!window.__gestorProModuleLoaded){el.textContent='O sistema não conseguiu carregar o módulo de acesso. Atualize o arquivo index.html no GitHub e tente novamente. Detalhe: '+(e.message||'erro de carregamento');el.className='status red';}});
 window.addEventListener('unhandledrejection',function(e){var el=document.getElementById('authStatus');if(el){el.textContent='Falha de comunicação: '+(e.reason&&e.reason.message?e.reason.message:String(e.reason));el.className='status red';}});
 </script>
-<script type="module">
+<script>
+(async function gestorProBoot(){
 let createClient;
 try {
   try {
@@ -418,5 +419,10 @@ supabase.auth.onAuthStateChange((_event,s)=>{if(!s){session=null;show('authView'
 const {data:{session:initial}}=await supabase.auth.getSession();if(initial){session=initial;await bootstrap()}else{show('authView')}
 
 }
+})().catch(function(bootError){
+  const statusEl=document.getElementById('authStatus');
+  if(statusEl){statusEl.textContent='Falha ao iniciar o GestorPro: '+(bootError&&bootError.message?bootError.message:String(bootError));statusEl.className='status red';}
+  window.__gestorProModuleLoaded=true;
+});
 </script>
 </body></html>
