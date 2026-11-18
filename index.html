@@ -20,7 +20,7 @@ rap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12p
  </div></div>
 <div id="setupView" class="authwrap hidden"><div class="authcard"><div class="authbrand">GESTORPRO<small>CONFIGURAÇÃO INICIAL</small></div><h2>Cadastre sua empresa</h2><p class="muted">Este será o ambiente administrativo inicial da sua organização.</p><form id="setupForm"><div class="field"><label>Nome da empresa</label><input id="companyName" required maxlength="120" placeholder="Ex.: Minha Rede de Restaurantes"></div><div class="field"><label>Nome da primeira unidade</label><input id="unitName" required maxlength="120" placeholder="Ex.: Unidade Matriz"></div><button type="submit">Criar empresa e unidade</button></form><div id="setupStatus" class="status" role="status"></div><button class="secondary" id="setupLogout" type="button">Sair</button></div></div>
 <div id="appView" class="shell hidden">
- <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="custos">💰 &nbsp; CMV e Custos</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="relatorios">📊 &nbsp; Relatórios e auditoria</button><button data-page="alertas">🔔 &nbsp; Central de alertas</button><button data-page="aprovacoes">✓ &nbsp; Centro de aprovações</button><button data-page="seguranca">🔐 &nbsp; Segurança e acessos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
+ <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="custos">💰 &nbsp; CMV e Custos</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="relatorios">📊 &nbsp; Relatórios e auditoria</button><button data-page="alertas">🔔 &nbsp; Central de alertas</button><button data-page="aprovacoes">✓ &nbsp; Centro de aprovações</button><button data-page="notificacoes">✉ &nbsp; Notificações</button><button data-page="seguranca">🔐 &nbsp; Segurança e acessos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
  <main class="main"><header class="top"><strong id="topTitle">Dashboard gerencial</strong><div class="topright"><select id="unitSelect" aria-label="Selecionar unidade"></select><span id="userLabel"></span><button class="secondary" id="logoutBtn">Sair</button></div></header><div class="content" id="app"></div></main>
 </div>
 <script>
@@ -64,7 +64,7 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 window.__gestorProModuleLoaded=true;
 const $=id=>document.getElementById(id);
 let session=null, memberships=[], units=[], companyId=null, unitId=null, currentPage='dashboard', currentRole=null;
-const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',estoque:'Controle de estoque',compras:'Compras',recebimentos:'Recebimentos',custos:'CMV e Custos',rh:'Recursos Humanos',relatorios:'Relatórios e auditoria',alertas:'Central de alertas',aprovacoes:'Centro de aprovações',seguranca:'Segurança e acessos',operacao:'Operações',ajuda:'Sobre o sistema'};
+const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',estoque:'Controle de estoque',compras:'Compras',recebimentos:'Recebimentos',custos:'CMV e Custos',rh:'Recursos Humanos',relatorios:'Relatórios e auditoria',alertas:'Central de alertas',aprovacoes:'Centro de aprovações',notificacoes:'Central de notificações',seguranca:'Segurança e acessos',operacao:'Operações',ajuda:'Sobre o sistema'};
 function status(id,msg,kind=''){const el=$(id);el.textContent=msg;el.className='status '+kind}
 function show(view){['authView','setupView','appView'].forEach(id=>$(id).classList.toggle('hidden',id!==view))}
 function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -85,7 +85,7 @@ $('unitSelect').addEventListener('change',async()=>{const previous=unitId;unitId
 $('logoutBtn').addEventListener('click',logout);$('setupLogout').addEventListener('click',logout);async function logout(){if(session&&companyId)await logSecurityEvent('logout',{});await supabase.auth.signOut();session=null;currentRole=null;show('authView');$('authForm').reset();status('authStatus','Você saiu do GestorPro.');}
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(!b)return;currentPage=b.dataset.page;document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x===b));$('topTitle').textContent=titles[currentPage]||'GestorPro';render()});
 function table(headers,rows){return `<div class="tablewrap"><table><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows||''}</tbody></table>${rows?'':'<div class="empty">Nenhum registro encontrado.</div>'}</div>`}
-async function render(){const app=$('app');app.innerHTML='<div class="notice">Carregando dados seguros da unidade...</div>';if(currentPage==='alertas'){await renderAlerts(app);return}if(currentPage==='aprovacoes'){await renderApprovals(app);return}if(currentPage==='seguranca'){await renderSecurity(app);return}if(currentPage==='dashboard'){
+async function render(){const app=$('app');app.innerHTML='<div class="notice">Carregando dados seguros da unidade...</div>';if(currentPage==='alertas'){await renderAlerts(app);return}if(currentPage==='aprovacoes'){await renderApprovals(app);return}if(currentPage==='notificacoes'){await renderNotifications(app);return}if(currentPage==='seguranca'){await renderSecurity(app);return}if(currentPage==='dashboard'){
  const {data,error}=await supabase.from('v_management_unit_dashboard').select('*').eq('unit_id',unitId).maybeSingle();
  if(error){app.innerHTML=`<div class="notice">Não foi possível carregar o dashboard: ${safe(error.message)}</div>`;return}
  const d=data||{}, now=new Date(), monthStart=new Date(now.getFullYear(),now.getMonth(),1), todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -498,6 +498,46 @@ async function renderApprovals(app){
   await renderApprovals(app);
  }));
  app.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{currentPage=b.dataset.go;document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===currentPage));$('topTitle').textContent=titles[currentPage];render()}));
+}
+
+
+async function renderNotifications(app){
+ const canSend=['admin','manager'].includes(currentRole);
+ const unit=unitId,company=companyId;
+ app.innerHTML='<div class="pagehead"><div><h1>Central de notificações</h1><div class="sub">Comunicados internos direcionados por unidade e usuário.</div></div><button id="refreshNotifications">Atualizar</button></div><div id="notificationKpis" class="grid"></div><div id="notificationComposer"></div><div class="card section"><h3>Minha caixa de entrada</h3><div id="notificationInbox"><div class="notice">Carregando notificações...</div></div></div>';
+ $('refreshNotifications').addEventListener('click',()=>renderNotifications(app));
+ let recipients=[];
+ if(canSend){
+  const [members,access]=await Promise.all([
+   supabase.from('company_memberships').select('user_id,role').eq('company_id',company),
+   supabase.from('user_unit_access').select('user_id').eq('company_id',company).eq('unit_id',unit)
+  ]);
+  if(members.error||access.error){$('notificationComposer').innerHTML='<div class="notice">Não foi possível carregar os destinatários: '+safe((members.error||access.error).message)+'</div>'}
+  else{
+   const allowed=new Set((access.data||[]).map(x=>x.user_id));
+   recipients=(members.data||[]).filter(x=>x.role==='admin'||allowed.has(x.user_id));
+   const ids=recipients.map(x=>x.user_id);
+   const profiles=ids.length?await supabase.from('user_profiles').select('id,full_name,email').in('id',ids):{data:[],error:null};
+   const profileMap=new Map((profiles.data||[]).map(x=>[x.id,x]));
+   recipients=recipients.map(x=>({...x,profile:profileMap.get(x.user_id)})).filter(x=>x.profile);
+   $('notificationComposer').innerHTML='<div class="card section"><h3>Enviar comunicado</h3><form id="notificationForm"><div class="field"><label>Destinatário</label><select name="recipient_user_id" required><option value="">Selecione um usuário</option>'+recipients.map(x=>'<option value="'+x.user_id+'">'+safe(x.profile.full_name||x.profile.email||'Usuário')+' · '+safe(x.role)+'</option>').join('')+'</select></div><div class="field"><label>Tipo</label><select name="notification_type"><option value="general">Comunicado geral</option><option value="operation">Operacional</option><option value="purchase">Compras</option><option value="rh">Recursos humanos</option><option value="urgent">Urgente</option></select></div><div class="field"><label>Título</label><input name="title" maxlength="160" required minlength="3" placeholder="Assunto da notificação"></div><div class="field"><label>Mensagem</label><textarea name="body" rows="3" maxlength="2000" required placeholder="Escreva o comunicado..."></textarea></div><button type="submit">Enviar notificação</button><div id="notificationSendStatus" class="status"></div></form></div>';
+   $('notificationForm')?.addEventListener('submit',async e=>{
+    e.preventDefault();const form=e.currentTarget,fd=new FormData(form),btn=form.querySelector('button[type=submit]');btn.disabled=true;
+    const {error}=await supabase.from('notifications').insert({company_id:company,unit_id:unit,recipient_user_id:String(fd.get('recipient_user_id')),notification_type:String(fd.get('notification_type')),title:String(fd.get('title')).trim(),body:String(fd.get('body')).trim(),created_by:session.user.id});
+    const st=$('notificationSendStatus');if(error){st.textContent='Não foi possível enviar: '+error.message;st.className='status red';btn.disabled=false;return}
+    st.textContent='Notificação enviada.';st.className='status green';form.reset();btn.disabled=false;await loadInbox();
+   });
+  }
+ }else $('notificationComposer').innerHTML='<div class="notice">Você pode consultar e marcar como lidas as notificações recebidas. O envio é restrito a gerentes e administradores.</div>';
+ async function loadInbox(){
+  const {data,error}=await supabase.from('notifications').select('id,recipient_user_id,created_by,notification_type,title,body,read_at,created_at').eq('company_id',company).eq('unit_id',unit).or('recipient_user_id.eq.'+session.user.id+',created_by.eq.'+session.user.id).order('created_at',{ascending:false}).limit(150);
+  if(error){$('notificationInbox').innerHTML='<div class="notice">Erro ao consultar notificações: '+safe(error.message)+'</div>';return}
+  const rows=data||[],inbox=rows.filter(x=>x.recipient_user_id===session.user.id),unread=inbox.filter(x=>!x.read_at).length,sent=rows.filter(x=>x.created_by===session.user.id&&x.recipient_user_id!==session.user.id).length;
+  $('notificationKpis').innerHTML=[['Recebidas',inbox.length],['Não lidas',unread],['Enviadas por mim',sent]].map(x=>'<div class="card kpi"><small>'+x[0]+'</small><b>'+x[1]+'</b></div>').join('');
+  $('notificationInbox').innerHTML=inbox.length?inbox.map(x=>'<div class="card section" style="border-left:4px solid '+(x.read_at?'#d9e2ec':(x.notification_type==='urgent'?'#c74747':'#2878c7'))+'"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>'+safe(x.title)+'</b><span class="pill">'+safe(({general:'Geral',operation:'Operacional',purchase:'Compras',rh:'RH',urgent:'Urgente'})[x.notification_type]||x.notification_type)+'</span></div><p>'+safe(x.body).replace(/\n/g,'<br>')+'</p><div class="muted">'+new Date(x.created_at).toLocaleString('pt-BR')+' · '+(x.read_at?'Lida':'Não lida')+'</div>'+(x.read_at?'':'<button class="secondary" data-read-notification="'+x.id+'">Marcar como lida</button>')+'</div>').join(''):'<div class="empty">Você não possui notificações nesta unidade.</div>';
+  $('notificationInbox').querySelectorAll('[data-read-notification]').forEach(b=>b.addEventListener('click',async()=>{const {error}=await supabase.from('notifications').update({read_at:new Date().toISOString()}).eq('id',b.dataset.readNotification).eq('recipient_user_id',session.user.id);if(error){alert('Não foi possível marcar como lida: '+error.message);return}await loadInbox()}));
+ }
+ await loadInbox();
 }
 
 async function renderSecurity(app){
