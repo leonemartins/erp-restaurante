@@ -85,7 +85,7 @@ $('unitSelect').addEventListener('change',async()=>{const previous=unitId;unitId
 $('logoutBtn').addEventListener('click',logout);$('setupLogout').addEventListener('click',logout);async function logout(){if(session&&companyId)await logSecurityEvent('logout',{});await supabase.auth.signOut();session=null;currentRole=null;show('authView');$('authForm').reset();status('authStatus','Você saiu do GestorPro.');}
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(!b)return;currentPage=b.dataset.page;document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x===b));$('topTitle').textContent=titles[currentPage]||'GestorPro';render()});
 function table(headers,rows){return `<div class="tablewrap"><table><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows||''}</tbody></table>${rows?'':'<div class="empty">Nenhum registro encontrado.</div>'}</div>`}
-async function render(){const app=$('app');app.innerHTML='<div class="notice">Carregando dados seguros da unidade...</div>';if(currentPage==='dashboard'){
+async function render(){const app=$('app');app.innerHTML='<div class="notice">Carregando dados seguros da unidade...</div>';if(currentPage==='seguranca'){await renderSecurity(app);return}if(currentPage==='dashboard'){
  const {data,error}=await supabase.from('v_management_unit_dashboard').select('*').eq('unit_id',unitId).maybeSingle();
  if(error){app.innerHTML=`<div class="notice">Não foi possível carregar o dashboard: ${safe(error.message)}</div>`;return}
  const d=data||{}, now=new Date(), monthStart=new Date(now.getFullYear(),now.getMonth(),1), todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -586,7 +586,6 @@ async function renderHR(app){
  }
 }
 
-if(currentPage==='seguranca'){renderSecurity(app)}
 if(currentPage==='operacao'){app.innerHTML='<div class="pagehead"><div><h1>Operações</h1><div class="sub">Inventários, recebimentos, qualidade, RH e manutenção.</div></div></div><div class="notice">As tabelas e regras do backend estão preparadas; as telas operacionais serão conectadas módulo a módulo e testadas antes do uso real.</div>';return}
 if(currentPage==='ajuda'){app.innerHTML='<div class="card"><h2>GestorPro conectado ao Supabase</h2><p>Login real, sessão autenticada, empresa, unidade e leitura do dashboard estão integrados nesta primeira etapa.</p><p class="notice">Ainda não é uma versão pronta para operação: cadastros, estoque, compras, recebimento e demais processos precisam de suas telas de gravação, validação e testes.</p></div>';return}}
 supabase.auth.onAuthStateChange((_event,s)=>{if(!s){session=null;show('authView')} });
