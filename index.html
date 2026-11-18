@@ -27,20 +27,35 @@ rap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12p
 window.__gestorProModuleLoaded=false;
 window.__gestorProAuthHandlerReady=false;
 // Impede que o formulário faça um POST/recarregamento se o módulo não inicializar.
-document.addEventListener('submit',function(e){if(e.target&&e.target.id==='authForm'){e.preventDefault();if(!window.__gestorProAuthHandlerReady){var el=document.getElementById('authStatus');if(el){el.textContent='O módulo de login não foi inicializado. Verifique a conexão e atualize o index.html publicado no GitHub. Nenhum dado foi enviado.';el.className='status red';}}}},true);
+document.addEventListener('submit',function(e){if(e.target&&e.target.id==='authForm'){e.preventDefault();if(!window.__gestorProAuthHandlerReady){var el=document.getElementById('authStatus');if(el&&!el.textContent.trim()){el.textContent='O módulo de login ainda está inicializando. Aguarde alguns segundos e atualize a página. Nenhum dado foi enviado.';el.className='status red';}}}},true);
 window.addEventListener('error',function(e){var el=document.getElementById('authStatus');if(el&&!window.__gestorProModuleLoaded){el.textContent='O sistema não conseguiu carregar o módulo de acesso. Atualize o arquivo index.html no GitHub e tente novamente. Detalhe: '+(e.message||'erro de carregamento');el.className='status red';}});
 window.addEventListener('unhandledrejection',function(e){var el=document.getElementById('authStatus');if(el){el.textContent='Falha de comunicação: '+(e.reason&&e.reason.message?e.reason.message:String(e.reason));el.className='status red';}});
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js" onerror="document.getElementById('authStatus').textContent='Não foi possível carregar a biblioteca do Supabase. Verifique a conexão com a internet.';document.getElementById('authStatus').className='status red';"></script>
 <script type="module">
-const createClient = window.supabase && window.supabase.createClient;
+let createClient;
+try {
+  try {
+    ({ createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/+esm'));
+  } catch (primaryError) {
+    ({ createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1?bundle'));
+  }
+} catch (loadError) {
+  const statusEl = document.getElementById('authStatus');
+  if (statusEl) {
+    statusEl.textContent = 'Não foi possível carregar o módulo de acesso. Verifique a conexão com a internet e tente novamente. Detalhe: ' + (loadError?.message || String(loadError));
+    statusEl.className = 'status red';
+  }
+  window.__gestorProModuleLoaded = true;
+  throw loadError;
+}
 if (typeof createClient !== 'function') {
   const statusEl = document.getElementById('authStatus');
   if (statusEl) {
-    statusEl.textContent = 'A biblioteca do Supabase não foi carregada pelo navegador. Atualize a página ou tente outra conexão.';
+    statusEl.textContent = 'A biblioteca de acesso foi carregada, mas não disponibilizou a função necessária. Atualize a página.';
     statusEl.className = 'status red';
   }
-  throw new Error('Supabase UMD library unavailable');
+  window.__gestorProModuleLoaded = true;
+  throw new Error('Supabase createClient unavailable');
 }
 const SUPABASE_URL='https://rtkohwkhbfxcqyyivlav.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_EfsK97hZ0JfeSGl2Lb7GcQ_wl1jy1UV';
