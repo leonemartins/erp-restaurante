@@ -20,7 +20,7 @@ rap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12p
  </div></div>
 <div id="setupView" class="authwrap hidden"><div class="authcard"><div class="authbrand">GESTORPRO<small>CONFIGURAÇÃO INICIAL</small></div><h2>Cadastre sua empresa</h2><p class="muted">Este será o ambiente administrativo inicial da sua organização.</p><form id="setupForm"><div class="field"><label>Nome da empresa</label><input id="companyName" required maxlength="120" placeholder="Ex.: Minha Rede de Restaurantes"></div><div class="field"><label>Nome da primeira unidade</label><input id="unitName" required maxlength="120" placeholder="Ex.: Unidade Matriz"></div><button type="submit">Criar empresa e unidade</button></form><div id="setupStatus" class="status" role="status"></div><button class="secondary" id="setupLogout" type="button">Sair</button></div></div>
 <div id="appView" class="shell hidden">
- <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="custos">💰 &nbsp; CMV e Custos</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="relatorios">📊 &nbsp; Relatórios e auditoria</button><button data-page="seguranca">🔐 &nbsp; Segurança e acessos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
+ <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="custos">💰 &nbsp; CMV e Custos</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="relatorios">📊 &nbsp; Relatórios e auditoria</button><button data-page="alertas">🔔 &nbsp; Central de alertas</button><button data-page="seguranca">🔐 &nbsp; Segurança e acessos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
  <main class="main"><header class="top"><strong id="topTitle">Dashboard gerencial</strong><div class="topright"><select id="unitSelect" aria-label="Selecionar unidade"></select><span id="userLabel"></span><button class="secondary" id="logoutBtn">Sair</button></div></header><div class="content" id="app"></div></main>
 </div>
 <script>
@@ -64,7 +64,7 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 window.__gestorProModuleLoaded=true;
 const $=id=>document.getElementById(id);
 let session=null, memberships=[], units=[], companyId=null, unitId=null, currentPage='dashboard', currentRole=null;
-const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',estoque:'Controle de estoque',compras:'Compras',recebimentos:'Recebimentos',custos:'CMV e Custos',rh:'Recursos Humanos',relatorios:'Relatórios e auditoria',seguranca:'Segurança e acessos',operacao:'Operações',ajuda:'Sobre o sistema'};
+const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',estoque:'Controle de estoque',compras:'Compras',recebimentos:'Recebimentos',custos:'CMV e Custos',rh:'Recursos Humanos',relatorios:'Relatórios e auditoria',alertas:'Central de alertas',seguranca:'Segurança e acessos',operacao:'Operações',ajuda:'Sobre o sistema'};
 function status(id,msg,kind=''){const el=$(id);el.textContent=msg;el.className='status '+kind}
 function show(view){['authView','setupView','appView'].forEach(id=>$(id).classList.toggle('hidden',id!==view))}
 function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -85,7 +85,7 @@ $('unitSelect').addEventListener('change',async()=>{const previous=unitId;unitId
 $('logoutBtn').addEventListener('click',logout);$('setupLogout').addEventListener('click',logout);async function logout(){if(session&&companyId)await logSecurityEvent('logout',{});await supabase.auth.signOut();session=null;currentRole=null;show('authView');$('authForm').reset();status('authStatus','Você saiu do GestorPro.');}
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(!b)return;currentPage=b.dataset.page;document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x===b));$('topTitle').textContent=titles[currentPage]||'GestorPro';render()});
 function table(headers,rows){return `<div class="tablewrap"><table><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows||''}</tbody></table>${rows?'':'<div class="empty">Nenhum registro encontrado.</div>'}</div>`}
-async function render(){const app=$('app');app.innerHTML='<div class="notice">Carregando dados seguros da unidade...</div>';if(currentPage==='seguranca'){await renderSecurity(app);return}if(currentPage==='dashboard'){
+async function render(){const app=$('app');app.innerHTML='<div class="notice">Carregando dados seguros da unidade...</div>';if(currentPage==='alertas'){await renderAlerts(app);return}if(currentPage==='seguranca'){await renderSecurity(app);return}if(currentPage==='dashboard'){
  const {data,error}=await supabase.from('v_management_unit_dashboard').select('*').eq('unit_id',unitId).maybeSingle();
  if(error){app.innerHTML=`<div class="notice">Não foi possível carregar o dashboard: ${safe(error.message)}</div>`;return}
  const d=data||{}, now=new Date(), monthStart=new Date(now.getFullYear(),now.getMonth(),1), todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
@@ -423,6 +423,41 @@ if(currentPage==='recebimentos'){await renderGoodsReceipts(app);return}
 if(currentPage==='relatorios'){await renderReports(app);return}
 
 if(currentPage==='rh'){await renderHR(app);return}
+
+async function renderAlerts(app){
+ app.innerHTML='<div class="pagehead"><div><h1>Central de alertas</h1><div class="sub">Pendências operacionais da unidade selecionada. Os avisos desaparecem quando a situação é regularizada.</div></div><button id="refreshAlerts">Atualizar alertas</button></div><div id="alertSummary" class="grid"></div><div class="card section"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h3>Prioridades que exigem atenção</h3><span class="muted" id="alertUpdated"></span></div><div id="alertList">Consultando indicadores...</div></div>';
+ $('refreshAlerts').addEventListener('click',()=>renderAlerts(app));
+ const {data:d,error}=await supabase.from('v_management_unit_dashboard').select('*').eq('unit_id',unitId).maybeSingle();
+ if(error){$('alertList').innerHTML='<div class="notice">Não foi possível consultar os indicadores: '+safe(error.message)+'</div>';return}
+ const alerts=[],add=(count,severity,title,description)=>{const n=Number(count||0);if(n>0)alerts.push({count:n,severity,title,description})};
+ add(d?.critical_nonconformities,'critical','Não conformidades críticas','Existem ocorrências críticas de segurança dos alimentos abertas.');
+ add(d?.overdue_corrective_actions,'high','Ações corretivas vencidas','Há ações corretivas com prazo ultrapassado.');
+ add(d?.products_below_minimum,'high','Estoque abaixo do mínimo','Produtos precisam de reposição para evitar ruptura.');
+ add(d?.receipts_pending_validation,'medium','Recebimentos aguardando validação','Confira quantidades, qualidade e divergências antes de finalizar.');
+ add(d?.inventories_pending_approval,'medium','Inventários aguardando aprovação','Revise as contagens e aprove ou solicite correções.');
+ add(d?.overdue_maintenance_orders,'high','Ordens de manutenção atrasadas','Há serviços com prazo de execução ultrapassado.');
+ add(d?.preventive_maintenance_due,'medium','Manutenções preventivas próximas ou vencidas','Verifique os planos preventivos com vencimento até hoje.');
+ add(d?.open_attendance_occurrences,'medium','Ocorrências de ponto em aberto','Revise faltas, atrasos e demais ocorrências pendentes.');
+ add(d?.pending_leave_requests,'medium','Solicitações de afastamento pendentes','Existem solicitações aguardando análise.');
+ let cmvText='Meta de CMV não configurada ou dados insuficientes.';
+ if(['admin','manager'].includes(currentRole)){
+  const [g,sales,costs]=await Promise.all([
+   supabase.from('goals').select('target_value').eq('company_id',companyId).eq('unit_id',unitId).eq('indicator','cmv_teorico_percent').order('created_at',{ascending:false}).limit(1),
+   supabase.from('v_sales_rows_mapped').select('menu_item_id,quantity,net_amount,is_mapped,sold_at').eq('company_id',companyId).eq('unit_id',unitId).gte('sold_at',new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString()).limit(10000),
+   supabase.from('menu_cost_snapshots').select('menu_item_id,recipe_cost,calculated_at').eq('company_id',companyId).eq('unit_id',unitId).order('calculated_at',{ascending:false}).limit(5000)
+  ]);
+  const target=Number(g.data?.[0]?.target_value),latest=new Map();(costs.data||[]).forEach(x=>{if(!latest.has(x.menu_item_id))latest.set(x.menu_item_id,Number(x.recipe_cost||0))});
+  let salesTotal=0,covered=0,costTotal=0;for(const x of sales.data||[]){const net=Number(x.net_amount||0),qty=Number(x.quantity||0);salesTotal+=net;if(x.is_mapped&&x.menu_item_id&&latest.has(x.menu_item_id)){covered+=net;costTotal+=latest.get(x.menu_item_id)*qty}}
+  if(g.data?.length&&covered>0&&Number.isFinite(target)){const cmv=costTotal/covered*100;cmvText='CMV teórico '+cmv.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% · meta '+target.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';if(cmv>target)add(1,'critical','CMV teórico acima da meta','CMV estimado em '+cmv.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%, acima da meta de '+target.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%.')}else if(g.error||sales.error||costs.error)cmvText='Não foi possível calcular o CMV agora.';
+ }
+ const critical=alerts.filter(x=>x.severity==='critical').reduce((a,x)=>a+x.count,0),high=alerts.filter(x=>x.severity==='high').reduce((a,x)=>a+x.count,0),total=alerts.reduce((a,x)=>a+x.count,0);
+ $('alertSummary').innerHTML=[['Alertas ativos',total],['Prioridade crítica',critical],['Alta prioridade',high],['Indicadores acompanhados',9]].map(x=>'<div class="card kpi"><small>'+x[0]+'</small><b>'+x[1]+'</b></div>').join('');
+ const rank={critical:0,high:1,medium:2};alerts.sort((a,b)=>rank[a.severity]-rank[b.severity]);
+ const color={critical:'red',high:'red',medium:''},label={critical:'Crítico',high:'Alta',medium:'Atenção'};
+ $('alertList').innerHTML=alerts.length?'<div class="tablewrap"><table><thead><tr><th>Prioridade</th><th>Ocorrência</th><th>Quantidade</th><th>Orientação</th></tr></thead><tbody>'+alerts.map(x=>'<tr><td><b class="'+color[x.severity]+'">'+label[x.severity]+'</b></td><td>'+safe(x.title)+'</td><td><b>'+x.count+'</b></td><td>'+safe(x.description)+'</td></tr>').join('')+'</tbody></table></div>':'<div class="notice green">Nenhuma pendência identificada nos indicadores consultados.</div>';
+ $('alertUpdated').textContent='Atualizado em '+new Date().toLocaleString('pt-BR');
+ const cmv=document.createElement('p');cmv.className='muted';cmv.textContent=cmvText;$('alertList').appendChild(cmv);
+}
 
 async function renderSecurity(app){
  if(currentRole!=='admin'){app.innerHTML='<div class="notice">Acesso restrito a administradores da empresa.</div>';return}
