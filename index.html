@@ -84,7 +84,38 @@ $('unitSelect').addEventListener('change',async()=>{unitId=$('unitSelect').value
 $('logoutBtn').addEventListener('click',logout);$('setupLogout').addEventListener('click',logout);async function logout(){await supabase.auth.signOut();session=null;show('authView');$('authForm').reset();status('authStatus','Você saiu do GestorPro.');}
 $('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(!b)return;currentPage=b.dataset.page;document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x===b));$('topTitle').textContent=titles[currentPage]||'GestorPro';render()});
 function table(headers,rows){return `<div class="tablewrap"><table><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows||''}</tbody></table>${rows?'':'<div class="empty">Nenhum registro encontrado.</div>'}</div>`}
-async function render(){const app=$('app');app.innerHTML='<div class="notice">Carregando dados seguros da unidade...</div>';if(currentPage==='dashboard'){const {data,error}=await supabase.from('v_management_unit_dashboard').select('*').eq('unit_id',unitId).maybeSingle();if(error){app.innerHTML=`<div class="notice">Não foi possível carregar o dashboard: ${safe(error.message)}</div>`;return}const d=data||{};const kpis=[['Funcionários ativos',d.active_employees||0],['Pedidos de compra (30 dias)',d.purchase_orders_total_30d||0],['Recebimentos pendentes',d.receipts_pending_validation||0],['Inventários em andamento',d.inventories_in_progress||0],['Produtos abaixo do mínimo',d.products_below_minimum||0],['Vendas importadas (30 dias)',Number(d.sales_net_total_30d||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})],['Não conformidades abertas',d.open_nonconformities||0],['Ordens de manutenção abertas',d.open_maintenance_orders||0]];app.innerHTML=`<div class="pagehead"><div><h1>Visão geral</h1><div class="sub">Indicadores consolidados da unidade selecionada</div></div><span class="pill">Dados do Supabase</span></div><div class="grid">${kpis.map(([a,b])=>`<div class="card kpi"><small>${a}</small><b>${safe(b)}</b></div>`).join('')}</div><div class="section notice">Os indicadores começam a aparecer conforme os registros reais forem cadastrados. Nenhum dado demonstrativo foi misturado ao banco.</div>`;return}
+async function render(){const app=$('app');app.innerHTML='<div class="notice">Carregando dados seguros da unidade...</div>';if(currentPage==='dashboard'){
+ const {data,error}=await supabase.from('v_management_unit_dashboard').select('*').eq('unit_id',unitId).maybeSingle();
+ if(error){app.innerHTML=`<div class="notice">Não foi possível carregar o dashboard: ${safe(error.message)}</div>`;return}
+ const d=data||{}, now=new Date(), monthStart=new Date(now.getFullYear(),now.getMonth(),1), todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+ const monthISO=monthStart.toISOString(), monthDate=monthISO.slice(0,10), todayISO=todayStart.toISOString();
+ const [leaveRes,occRes,otPendingRes,otApprovedRes,reviewRes,punchRes]=await Promise.all([
+  supabase.from('leave_requests').select('id',{count:'exact',head:true}).eq('company_id',companyId).eq('unit_id',unitId).eq('status','pending'),
+  supabase.from('attendance_occurrences').select('id,occurrence_type').eq('company_id',companyId).eq('unit_id',unitId).gte('starts_at',monthISO).in('occurrence_type',['absence','late']),
+  supabase.from('overtime_records').select('id',{count:'exact',head:true}).eq('company_id',companyId).eq('unit_id',unitId).eq('status','pending'),
+  supabase.from('overtime_records').select('minutes').eq('company_id',companyId).eq('unit_id',unitId).eq('status','approved').gte('work_date',monthDate),
+  supabase.from('performance_reviews').select('score').eq('company_id',companyId).eq('unit_id',unitId).gte('period_end',monthDate).not('score','is',null),
+  supabase.from('time_clock_records').select('employee_id,event_type').eq('company_id',companyId).eq('unit_id',unitId).gte('event_at',todayISO).eq('event_type','clock_in')
+ ]);
+ const occ=occRes.data||[], approvedMinutes=(otApprovedRes.data||[]).reduce((sum,x)=>sum+Number(x.minutes||0),0), scores=(reviewRes.data||[]).map(x=>Number(x.score)).filter(Number.isFinite), avgScore=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):'—', punchedIn=new Set((punchRes.data||[]).map(x=>x.employee_id)).size;
+ const metric=(label,value,res=null)=>[label,res&&res.error?'—':value];
+ const hrKpis=[
+  metric('Colaboradores ativos',d.active_employees||0),
+  metric('Afastamentos pendentes',leaveRes.count||0,leaveRes),
+  metric('Faltas registradas no mês',occ.filter(x=>x.occurrence_type==='absence').length,occRes),
+  metric('Atrasos registrados no mês',occ.filter(x=>x.occurrence_type==='late').length,occRes),
+  metric('Horas extras pendentes',otPendingRes.count||0,otPendingRes),
+  metric('Horas extras aprovadas no mês', (approvedMinutes/60).toLocaleString('pt-BR',{maximumFractionDigits:1})+' h',otApprovedRes),
+  metric('Média das avaliações',avgScore,scores.length?reviewRes:null),
+  metric('Marcaram entrada hoje',punchedIn,punchRes)
+ ];
+ const opsKpis=[['Pedidos de compra (30 dias)',d.purchase_orders_total_30d||0],['Recebimentos pendentes',d.receipts_pending_validation||0],['Inventários em andamento',d.inventories_in_progress||0],['Produtos abaixo do mínimo',d.products_below_minimum||0],['Vendas importadas (30 dias)',Number(d.sales_net_total_30d||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})],['Não conformidades abertas',d.open_nonconformities||0],['Ordens de manutenção abertas',d.open_maintenance_orders||0]];
+ app.innerHTML=`<div class="pagehead"><div><h1>Visão geral</h1><div class="sub">Indicadores consolidados da unidade selecionada</div></div><span class="pill">Dados reais do Supabase</span></div>
+ <div class="section"><h2>Recursos Humanos</h2><div class="sub">Indicadores da equipe e frequência · mês atual</div><div class="grid">${hrKpis.map(([a,b])=>`<div class="card kpi"><small>${a}</small><b>${safe(b)}</b></div>`).join('')}</div></div>
+ <div class="section"><h2>Operação e resultados</h2><div class="grid">${opsKpis.map(([a,b])=>`<div class="card kpi"><small>${a}</small><b>${safe(b)}</b></div>`).join('')}</div></div>
+ <div class="section notice">Os indicadores são calculados a partir dos registros existentes. Faltas e atrasos representam ocorrências cadastradas no mês; horas extras consideram registros aprovados. Indicadores sem registros aparecem como zero ou traço, conforme a disponibilidade dos dados.</div>`;
+ return
+}
 if(currentPage==='cadastros'){
 const tabs=[['products','Produtos'],['suppliers','Fornecedores'],['employees','Funcionários'],['users','Usuários'],['external_users','Usuários externos'],['structures','Estruturas'],['agreements','Convênios'],['services','Serviços']];
 let tab=window.gpCadTab||'products';
