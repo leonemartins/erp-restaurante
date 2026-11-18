@@ -20,7 +20,7 @@ rap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12p
  </div></div>
 <div id="setupView" class="authwrap hidden"><div class="authcard"><div class="authbrand">GESTORPRO<small>CONFIGURAÇÃO INICIAL</small></div><h2>Cadastre sua empresa</h2><p class="muted">Este será o ambiente administrativo inicial da sua organização.</p><form id="setupForm"><div class="field"><label>Nome da empresa</label><input id="companyName" required maxlength="120" placeholder="Ex.: Minha Rede de Restaurantes"></div><div class="field"><label>Nome da primeira unidade</label><input id="unitName" required maxlength="120" placeholder="Ex.: Unidade Matriz"></div><button type="submit">Criar empresa e unidade</button></form><div id="setupStatus" class="status" role="status"></div><button class="secondary" id="setupLogout" type="button">Sair</button></div></div>
 <div id="appView" class="shell hidden">
- <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="custos">💰 &nbsp; CMV e Custos</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
+ <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="custos">💰 &nbsp; CMV e Custos</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="relatorios">📊 &nbsp; Relatórios e auditoria</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
  <main class="main"><header class="top"><strong id="topTitle">Dashboard gerencial</strong><div class="topright"><select id="unitSelect" aria-label="Selecionar unidade"></select><span id="userLabel"></span><button class="secondary" id="logoutBtn">Sair</button></div></header><div class="content" id="app"></div></main>
 </div>
 <script>
@@ -64,7 +64,7 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 window.__gestorProModuleLoaded=true;
 const $=id=>document.getElementById(id);
 let session=null, memberships=[], units=[], companyId=null, unitId=null, currentPage='dashboard';
-const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',estoque:'Controle de estoque',compras:'Compras',recebimentos:'Recebimentos',custos:'CMV e Custos',rh:'Recursos Humanos',operacao:'Operações',ajuda:'Sobre o sistema'};
+const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',estoque:'Controle de estoque',compras:'Compras',recebimentos:'Recebimentos',custos:'CMV e Custos',rh:'Recursos Humanos',relatorios:'Relatórios e auditoria',operacao:'Operações',ajuda:'Sobre o sistema'};
 function status(id,msg,kind=''){const el=$(id);el.textContent=msg;el.className='status '+kind}
 function show(view){['authView','setupView','appView'].forEach(id=>$(id).classList.toggle('hidden',id!==view))}
 function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -419,8 +419,56 @@ async function renderGoodsReceipts(app){
 if(currentPage==='compras'){await renderPurchases(app);return}
 if(currentPage==='recebimentos'){await renderGoodsReceipts(app);return}
  if(currentPage==='custos'){await renderCosts(app);return}
+if(currentPage==='relatorios'){await renderReports(app);return}
 
 if(currentPage==='rh'){await renderHR(app);return}
+
+async function loadReportLibrary(src){if([...document.scripts].some(x=>x.src===src))return;await new Promise((resolve,reject)=>{const el=document.createElement('script');el.src=src;el.onload=resolve;el.onerror=()=>reject(new Error('Não foi possível carregar a biblioteca de exportação.'));document.head.appendChild(el)})}
+async function renderReports(app){
+ const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+ const dateDefault=new Date();const first=new Date(dateDefault.getFullYear(),dateDefault.getMonth(),1).toISOString().slice(0,10);const today=dateDefault.toISOString().slice(0,10);
+ app.innerHTML='<div class="card"><h2>Relatórios e auditoria</h2><p class="muted">Consulte movimentações e eventos registrados nesta unidade. Os relatórios respeitam as permissões do seu usuário.</p><div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="field"><label>Data inicial</label><input type="date" id="reportFrom" value="'+first+'"></div><div class="field"><label>Data final</label><input type="date" id="reportTo" value="'+today+'"></div><div class="field"><label>Tipo de relatório</label><select id="reportType"><option value="all">Todos os eventos</option><option value="prices">Alterações de preços</option><option value="stock">Movimentações de estoque</option><option value="losses">Perdas e desperdícios</option><option value="purchases">Pedidos de compra</option><option value="receipts">Recebimentos</option><option value="inventory">Inventários</option></select></div></div><div class="toolbar" style="display:flex;gap:8px;flex-wrap:wrap"><button id="runReport">Gerar relatório</button><button class="secondary" id="exportReportXlsx">Exportar Excel</button><button class="secondary" id="exportReportPdf">Exportar PDF</button></div><div id="reportStatus" class="status"></div></div><div class="grid section" style="grid-template-columns:repeat(4,minmax(0,1fr))" id="reportKpis"></div><div class="card section"><h3>Eventos e registros</h3><div id="reportTable"><div class="empty">Selecione o período e gere o relatório.</div></div></div>';
+ let reportRows=[],reportTitle='Todos os eventos';
+ const load=async()=>{
+ const from=$('reportFrom').value,to=$('reportTo').value,type=$('reportType').value;
+ if(!from||!to||from>to){msg('reportStatus','Informe um período válido.',true);return}
+ $('reportTable').innerHTML='<div class="notice">Consultando registros...</div>';
+ const start=from+'T00:00:00',end=new Date(to+'T23:59:59.999').toISOString();
+ const jobs={
+ prices:supabase.from('menu_price_history').select('menu_item_id,old_price,new_price,changed_at,changed_by').eq('company_id',companyId).eq('unit_id',unitId).gte('changed_at',start).lte('changed_at',end).order('changed_at',{ascending:false}).limit(5000),
+ stock:supabase.from('stock_movements').select('product_id,movement_type,quantity,unit_cost,quantity_before,quantity_after,created_by,created_at,negative_stock_authorized_by,negative_stock_justification').eq('company_id',companyId).eq('unit_id',unitId).gte('created_at',start).lte('created_at',end).order('created_at',{ascending:false}).limit(5000),
+ losses:supabase.from('stock_losses').select('product_id,quantity,unit_cost,reason,recorded_by,created_at').eq('company_id',companyId).eq('unit_id',unitId).gte('created_at',start).lte('created_at',end).order('created_at',{ascending:false}).limit(5000),
+ purchases:supabase.from('purchase_orders').select('order_number,status,total_amount,created_by,approved_by,approved_at,created_at').eq('company_id',companyId).eq('unit_id',unitId).gte('created_at',start).lte('created_at',end).order('created_at',{ascending:false}).limit(5000),
+ receipts:supabase.from('goods_receipts').select('status,received_by,received_at,validated_by,validated_at,finalized_by,finalized_at,cancelled_by,cancelled_at,cancellation_reason').eq('company_id',companyId).eq('unit_id',unitId).gte('received_at',start).lte('received_at',end).order('received_at',{ascending:false}).limit(5000),
+ inventory:supabase.from('inventory_counts').select('status,count_date,counted_by,approved_by,approved_at,finalized_by,finalized_at,created_at').eq('company_id',companyId).eq('unit_id',unitId).gte('created_at',start).lte('created_at',end).order('created_at',{ascending:false}).limit(5000)
+ };
+ const keys=type==='all'?Object.keys(jobs):[type];const results=await Promise.all(keys.map(k=>jobs[k]));const err=results.find(x=>x.error);if(err){$('reportTable').innerHTML='<div class="notice">Falha ao consultar: '+safe(err.error.message)+'</div>';msg('reportStatus','Verifique as permissões de acesso aos módulos.',true);return}
+ const data=Object.fromEntries(keys.map((k,i)=>[k,results[i].data||[]]));
+ const [menuRes,productRes,employeeRes]=await Promise.all([supabase.from('menu_items').select('id,name').eq('company_id',companyId).eq('unit_id',unitId),supabase.from('products').select('id,name').eq('company_id',companyId),supabase.from('employees').select('auth_user_id,full_name').eq('company_id',companyId).eq('unit_id',unitId)]);
+ const menus=new Map((menuRes.data||[]).map(x=>[x.id,x.name])),products=new Map((productRes.data||[]).map(x=>[x.id,x.name])),people=new Map((employeeRes.data||[]).map(x=>[x.auth_user_id,x.full_name]));
+ const actor=id=>people.get(id)||(id===session.user.id?'Você':id?'Usuário não identificado':'—');
+ reportRows=[];
+ const add=(category,when,description,detail,amount,actorName,extra='')=>reportRows.push({Categoria:category,Data:new Date(when).toLocaleString('pt-BR'),Registro:description,Detalhes:detail,Valor:Number(amount||0),Responsável:actorName||'—',Auditoria:extra||'—'});
+ (data.prices||[]).forEach(x=>add('Preço',x.changed_at,menus.get(x.menu_item_id)||'Item removido',money(x.old_price)+' → '+money(x.new_price),x.new_price,actor(x.changed_by),'Alteração de preço'));
+ (data.stock||[]).forEach(x=>add('Estoque',x.created_at,products.get(x.product_id)||'Produto',x.movement_type+' · '+x.quantity+' · saldo '+x.quantity_before+' → '+x.quantity_after,Number(x.quantity)*Number(x.unit_cost),actor(x.created_by),x.negative_stock_authorized_by?'Exceção de estoque negativo autorizada: '+(x.negative_stock_justification||'sem justificativa'):'Movimentação registrada'));
+ (data.losses||[]).forEach(x=>add('Perda',x.created_at,products.get(x.product_id)||'Produto',x.reason+' · quantidade '+x.quantity,x.quantity*x.unit_cost,actor(x.recorded_by),'Perda registrada'));
+ (data.purchases||[]).forEach(x=>add('Compra',x.created_at,'Pedido #'+x.order_number,'Status: '+x.status,x.total_amount,actor(x.created_by),x.approved_by?'Aprovado por '+actor(x.approved_by)+' em '+(x.approved_at?new Date(x.approved_at).toLocaleString('pt-BR'):'—'):'Sem aprovação registrada'));
+ (data.receipts||[]).forEach(x=>add('Recebimento',x.received_at||x.validated_at||x.finalized_at,'Recebimento de mercadoria','Status: '+x.status,0,actor(x.received_by),'Validador: '+actor(x.validated_by)+'; Finalizador: '+actor(x.finalized_by)+(x.cancellation_reason?'; Cancelamento: '+x.cancellation_reason:'')));
+ (data.inventory||[]).forEach(x=>add('Inventário',x.created_at,'Inventário · '+x.count_date,'Status: '+x.status,0,actor(x.counted_by),'Aprovador: '+actor(x.approved_by)+'; Finalizador: '+actor(x.finalized_by)));
+ reportRows.sort((a,b)=>new Date(b.Data.split('/').reverse().join('-'))-new Date(a.Data.split('/').reverse().join('-')));
+ reportTitle=({all:'Todos os eventos',prices:'Alterações de preços',stock:'Movimentações de estoque',losses:'Perdas e desperdícios',purchases:'Pedidos de compra',receipts:'Recebimentos',inventory:'Inventários'})[type];
+ const sum=reportRows.reduce((a,x)=>a+Number(x.Valor||0),0),count=reportRows.length,exception=reportRows.filter(x=>x.Auditoria.includes('Exceção')).length;
+ $('reportKpis').innerHTML=[['Registros',count],['Valor associado',money(sum)],['Alertas de estoque',exception],['Período',from.split('-').reverse().join('/')+' a '+to.split('-').reverse().join('/')]].map(x=>'<div class="card"><div class="muted">'+x[0]+'</div><h3>'+x[1]+'</h3></div>').join('');
+ const rows=reportRows.map(x=>'<tr>'+[x.Categoria,x.Data,x.Registro,x.Detalhes,money(x.Valor),x.Responsável,x.Auditoria].map(v=>'<td>'+safe(v)+'</td>').join('')+'</tr>').join('');
+ $('reportTable').innerHTML=table(['Categoria','Data','Registro','Detalhes','Valor','Responsável','Auditoria'],rows);
+ msg('reportStatus',count+' registro(s) encontrados. Limite de consulta: 5.000 por categoria.');
+ };
+ $('runReport').onclick=load;
+ $('exportReportXlsx').onclick=async()=>{if(!reportRows.length){msg('reportStatus','Gere um relatório com registros antes de exportar.',true);return}try{await loadReportLibrary('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');const ws=XLSX.utils.json_to_sheet(reportRows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Auditoria');XLSX.writeFile(wb,'GestorPro_Auditoria_'+today+'.xlsx');msg('reportStatus','Arquivo Excel gerado.')}catch(e){msg('reportStatus',e.message,true)}};
+ $('exportReportPdf').onclick=async()=>{if(!reportRows.length){msg('reportStatus','Gere um relatório com registros antes de exportar.',true);return}try{await loadReportLibrary('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');await loadReportLibrary('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js');const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});doc.setFontSize(16);doc.text('GestorPro - '+reportTitle,14,15);doc.setFontSize(9);doc.text('Período: '+$('reportFrom').value+' a '+$('reportTo').value+' | Unidade: '+($('unitSelect').selectedOptions[0]?.textContent||''),14,22);doc.autoTable({startY:27,head:[['Categoria','Data','Registro','Detalhes','Valor','Responsável','Auditoria']],body:reportRows.map(x=>[x.Categoria,x.Data,x.Registro,x.Detalhes,money(x.Valor),x.Responsável,x.Auditoria]),styles:{fontSize:7,cellPadding:2,overflow:'linebreak'},columnStyles:{3:{cellWidth:55},6:{cellWidth:55}},didDrawPage:()=>{doc.setFontSize(8);doc.text('Relatório gerado em '+new Date().toLocaleString('pt-BR'),14,doc.internal.pageSize.height-7)}});doc.save('GestorPro_Auditoria_'+today+'.pdf');msg('reportStatus','Arquivo PDF gerado.')}catch(e){msg('reportStatus',e.message,true)}};
+ await load();
+}
+
 async function renderHR(app){
  const tabs=[['overview','Painel RH'],['employees','Colaboradores'],['positions','Cargos'],['schedules','Jornadas'],['assignments','Escalas'],['timeclock','Ponto'],['occurrences','Ocorrências'],['leaves','Afastamentos'],['overtime','Horas extras'],['contracts','Contratos'],['reviews','Avaliações']];
  let tab=window.gpHRTab||'overview';
