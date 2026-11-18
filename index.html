@@ -89,15 +89,16 @@ async function render(){const app=$('app');app.innerHTML='<div class="notice">Ca
  if(error){app.innerHTML=`<div class="notice">Não foi possível carregar o dashboard: ${safe(error.message)}</div>`;return}
  const d=data||{}, now=new Date(), monthStart=new Date(now.getFullYear(),now.getMonth(),1), todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
  const monthISO=monthStart.toISOString(), monthDate=monthISO.slice(0,10), todayISO=todayStart.toISOString();
- const [leaveRes,occRes,otPendingRes,otApprovedRes,reviewRes,punchRes]=await Promise.all([
+ const [leaveRes,occRes,otPendingRes,otApprovedRes,reviewRes,punchRes,lossRes]=await Promise.all([
   supabase.from('leave_requests').select('id',{count:'exact',head:true}).eq('company_id',companyId).eq('unit_id',unitId).eq('status','pending'),
   supabase.from('attendance_occurrences').select('id,occurrence_type').eq('company_id',companyId).eq('unit_id',unitId).gte('starts_at',monthISO).in('occurrence_type',['absence','late']),
   supabase.from('overtime_records').select('id',{count:'exact',head:true}).eq('company_id',companyId).eq('unit_id',unitId).eq('status','pending'),
   supabase.from('overtime_records').select('minutes').eq('company_id',companyId).eq('unit_id',unitId).eq('status','approved').gte('work_date',monthDate),
   supabase.from('performance_reviews').select('score').eq('company_id',companyId).eq('unit_id',unitId).gte('period_end',monthDate).not('score','is',null),
-  supabase.from('time_clock_records').select('employee_id,event_type').eq('company_id',companyId).eq('unit_id',unitId).gte('event_at',todayISO).eq('event_type','clock_in')
+  supabase.from('time_clock_records').select('employee_id,event_type').eq('company_id',companyId).eq('unit_id',unitId).gte('event_at',todayISO).eq('event_type','clock_in'),
+  supabase.from('stock_losses').select('quantity,unit_cost').eq('company_id',companyId).eq('unit_id',unitId).gte('created_at',monthISO)
  ]);
- const occ=occRes.data||[], approvedMinutes=(otApprovedRes.data||[]).reduce((sum,x)=>sum+Number(x.minutes||0),0), scores=(reviewRes.data||[]).map(x=>Number(x.score)).filter(Number.isFinite), avgScore=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):'—', punchedIn=new Set((punchRes.data||[]).map(x=>x.employee_id)).size;
+ const losses=lossRes.data||[],lossCost=losses.reduce((sum,x)=>sum+Number(x.quantity||0)*Number(x.unit_cost||0),0),occ=occRes.data||[], approvedMinutes=(otApprovedRes.data||[]).reduce((sum,x)=>sum+Number(x.minutes||0),0), scores=(reviewRes.data||[]).map(x=>Number(x.score)).filter(Number.isFinite), avgScore=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):'—', punchedIn=new Set((punchRes.data||[]).map(x=>x.employee_id)).size;
  const metric=(label,value,res=null)=>[label,res&&res.error?'—':value];
  const hrKpis=[
   metric('Colaboradores ativos',d.active_employees||0),
@@ -110,9 +111,10 @@ async function render(){const app=$('app');app.innerHTML='<div class="notice">Ca
   metric('Marcaram entrada hoje',punchedIn,punchRes)
  ];
  const opsKpis=[['Pedidos de compra (30 dias)',d.purchase_orders_total_30d||0],['Recebimentos pendentes',d.receipts_pending_validation||0],['Inventários em andamento',d.inventories_in_progress||0],['Produtos abaixo do mínimo',d.products_below_minimum||0],['Vendas importadas (30 dias)',Number(d.sales_net_total_30d||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})],['Não conformidades abertas',d.open_nonconformities||0],['Ordens de manutenção abertas',d.open_maintenance_orders||0]];
+ const wasteKpis=[['Custo das perdas no mês',lossCost.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}),!lossRes.error],['Registros de perdas no mês',losses.length,!lossRes.error]];
  app.innerHTML=`<div class="pagehead"><div><h1>Visão geral</h1><div class="sub">Indicadores consolidados da unidade selecionada</div></div><span class="pill">Dados reais do Supabase</span></div>
  <div class="section"><h2>Recursos Humanos</h2><div class="sub">Indicadores da equipe e frequência · mês atual</div><div class="grid">${hrKpis.map(([a,b])=>`<div class="card kpi"><small>${a}</small><b>${safe(b)}</b></div>`).join('')}</div></div>
- <div class="section"><h2>Operação e resultados</h2><div class="grid">${opsKpis.map(([a,b])=>`<div class="card kpi"><small>${a}</small><b>${safe(b)}</b></div>`).join('')}</div></div>
+ <div class="section"><h2>Operação e resultados</h2><div class="grid">${opsKpis.map(([a,b])=>`<div class="card kpi"><small>${a}</small><b>${safe(b)}</b></div>`).join('')}</div></div>\n <div class="section"><h2>Desperdícios e perdas</h2><div class="sub">Impacto financeiro dos registros de perdas · mês atual</div><div class="grid">${wasteKpis.map(([a,b,ok])=>`<div class="card kpi"><small>${a}</small><b>${ok?safe(b):"Indisponível"}</b></div>`).join('')}</div><p class="muted">${lossRes.error?"Não foi possível consultar os registros de perdas. Verifique as permissões da unidade.":"Valores calculados a partir das perdas registradas no estoque."}</p></div>
  <div class="section notice">Os indicadores são calculados a partir dos registros existentes. Faltas e atrasos representam ocorrências cadastradas no mês; horas extras consideram registros aprovados. Indicadores sem registros aparecem como zero ou traço, conforme a disponibilidade dos dados.</div>`;
  return
 }
