@@ -537,6 +537,7 @@ async function renderNotifications(app){
   $('notificationInbox').innerHTML=inbox.length?inbox.map(x=>'<div class="card section" style="border-left:4px solid '+(x.read_at?'#d9e2ec':(x.notification_type==='urgent'?'#c74747':'#2878c7'))+'"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>'+safe(x.title)+'</b><span class="pill">'+safe(({general:'Geral',operation:'Operacional',purchase:'Compras',rh:'RH',urgent:'Urgente'})[x.notification_type]||x.notification_type)+'</span></div><p>'+safe(x.body).replace(/\n/g,'<br>')+'</p><div class="muted">'+new Date(x.created_at).toLocaleString('pt-BR')+' · '+(x.read_at?'Lida':'Não lida')+'</div>'+(x.read_at?'':'<button class="secondary" data-read-notification="'+x.id+'">Marcar como lida</button>')+'</div>').join(''):'<div class="empty">Você não possui notificações nesta unidade.</div>';
   $('notificationInbox').querySelectorAll('[data-read-notification]').forEach(b=>b.addEventListener('click',async()=>{const {error}=await supabase.from('notifications').update({read_at:new Date().toISOString()}).eq('id',b.dataset.readNotification).eq('recipient_user_id',session.user.id);if(error){alert('Não foi possível marcar como lida: '+error.message);return}await loadInbox()}));
  }
+ if(canSend){const overdue=await supabase.rpc('notify_my_overdue_corrective_actions');if(overdue.error)console.warn('Avisos de ações corretivas:',overdue.error.message);}
  await loadInbox();
 }
 
