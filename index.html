@@ -32,7 +32,21 @@ window.addEventListener('error',function(e){var el=document.getElementById('auth
 window.addEventListener('unhandledrejection',function(e){var el=document.getElementById('authStatus');if(el){el.textContent='Falha de comunicação: '+(e.reason&&e.reason.message?e.reason.message:String(e.reason));el.className='status red';}});
 </script>
 <script type="module">
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+let createClient;
+try {
+  ({ createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/+esm'));
+} catch (primaryImportError) {
+  try {
+    ({ createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1'));
+  } catch (fallbackImportError) {
+    const statusEl = document.getElementById('authStatus');
+    if (statusEl) {
+      statusEl.textContent = 'Não foi possível carregar a biblioteca de acesso. Verifique a conexão e tente atualizar a página. Detalhe: ' + (fallbackImportError?.message || String(fallbackImportError));
+      statusEl.className = 'status red';
+    }
+    throw fallbackImportError;
+  }
+}
 const SUPABASE_URL='https://rtkohwkhbfxcqyyivlav.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_EfsK97hZ0JfeSGl2Lb7GcQ_wl1jy1UV';
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
