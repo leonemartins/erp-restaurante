@@ -20,7 +20,7 @@ rap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12p
  </div></div>
 <div id="setupView" class="authwrap hidden"><div class="authcard"><div class="authbrand">GESTORPRO<small>CONFIGURAÇÃO INICIAL</small></div><h2>Cadastre sua empresa</h2><p class="muted">Este será o ambiente administrativo inicial da sua organização.</p><form id="setupForm"><div class="field"><label>Nome da empresa</label><input id="companyName" required maxlength="120" placeholder="Ex.: Minha Rede de Restaurantes"></div><div class="field"><label>Nome da primeira unidade</label><input id="unitName" required maxlength="120" placeholder="Ex.: Unidade Matriz"></div><button type="submit">Criar empresa e unidade</button></form><div id="setupStatus" class="status" role="status"></div><button class="secondary" id="setupLogout" type="button">Sair</button></div></div>
 <div id="appView" class="shell hidden">
- <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
+ <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="custos">💰 &nbsp; CMV e Custos</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
  <main class="main"><header class="top"><strong id="topTitle">Dashboard gerencial</strong><div class="topright"><select id="unitSelect" aria-label="Selecionar unidade"></select><span id="userLabel"></span><button class="secondary" id="logoutBtn">Sair</button></div></header><div class="content" id="app"></div></main>
 </div>
 <script>
@@ -64,7 +64,7 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 window.__gestorProModuleLoaded=true;
 const $=id=>document.getElementById(id);
 let session=null, memberships=[], units=[], companyId=null, unitId=null, currentPage='dashboard';
-const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',estoque:'Controle de estoque',compras:'Compras',recebimentos:'Recebimentos',rh:'Recursos Humanos',operacao:'Operações',ajuda:'Sobre o sistema'};
+const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',estoque:'Controle de estoque',compras:'Compras',recebimentos:'Recebimentos',custos:'CMV e Custos',rh:'Recursos Humanos',operacao:'Operações',ajuda:'Sobre o sistema'};
 function status(id,msg,kind=''){const el=$(id);el.textContent=msg;el.className='status '+kind}
 function show(view){['authView','setupView','appView'].forEach(id=>$(id).classList.toggle('hidden',id!==view))}
 function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -279,6 +279,67 @@ async function renderPurchases(app){
 }
 
 
+
+async function renderCosts(app){
+ const tab=window.gpCostsTab||'recipes';
+ const tabs=[['recipes','Fichas técnicas'],['menu','Cardápio'],['analysis','Análise de CMV']];
+ const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+ const [{data:products,error:pe},{data:recipes,error:re},{data:menu,error:me}]=await Promise.all([
+  supabase.from('products').select('id,name,unit_measure,active').eq('company_id',companyId).eq('active',true).order('name'),
+  supabase.from('recipes').select('id,name,description,yield_quantity,yield_unit,status,created_at').eq('company_id',companyId).eq('unit_id',unitId).order('created_at',{ascending:false}),
+  supabase.from('menu_items').select('id,name,category,selling_price,active').eq('company_id',companyId).eq('unit_id',unitId).order('name')
+ ]);
+ if(pe||re||me){app.innerHTML='<div class="notice">Erro ao carregar CMV e custos: '+safe((pe||re||me).message)+'</div>';return}
+ const productOpts=(products||[]).map(p=>'<option value="'+p.id+'">'+safe(p.name)+' ('+safe(p.unit_measure)+')</option>').join('');
+ app.innerHTML='<div class="pagehead"><div><h1>CMV e Custos</h1><div class="sub">Fichas técnicas, custo das preparações e margem dos itens do cardápio</div></div><span class="pill">Custos com base no estoque</span></div><div class="toolbar" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px">'+tabs.map(([k,l])=>'<button class="'+(tab===k?'':'secondary')+'" data-cost-tab="'+k+'">'+l+'</button>').join('')+'</div><div id="costContent"></div>';
+ app.querySelectorAll('[data-cost-tab]').forEach(b=>b.onclick=()=>{window.gpCostsTab=b.dataset.costTab;renderCosts(app)});
+ const host=$('costContent');
+ if(tab==='recipes'){
+  const rows=(recipes||[]).map(r=>'<tr><td>'+safe(r.name)+'</td><td>'+Number(r.yield_quantity).toLocaleString('pt-BR')+' '+safe(r.yield_unit)+'</td><td>'+safe(r.status||'—')+'</td><td><button class="secondary" data-recipe-view="'+r.id+'">Ingredientes e custo</button></td></tr>').join('');
+  host.innerHTML='<div class="card"><h3>Nova ficha técnica</h3><form id="recipeForm"><div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="field"><label>Nome da preparação *</label><input name="name" required maxlength="140"></div><div class="field"><label>Rendimento numérico *</label><input name="yield_quantity" type="number" min="0.001" step="0.001" value="1" required></div><div class="field"><label>Unidade do rendimento *</label><select name="yield_unit"><option value="porção">Porção</option><option value="kg">kg</option><option value="unidade">Unidade</option><option value="litro">Litro</option><option value="bandeja">Bandeja</option></select></div><div class="field"><label>Descrição</label><input name="description" maxlength="300"></div></div><div class="field"><label>Modo de preparo</label><textarea name="preparation" rows="2"></textarea></div><h4>Ingredientes</h4><div id="recipeIngredients"></div><button type="button" class="secondary" id="addIngredient">+ Adicionar ingrediente</button><div class="authactions" style="margin-top:12px"><button type="submit">Salvar ficha técnica</button></div><div id="recipeStatus" class="status"></div></form></div><div class="card section"><h3>Fichas cadastradas</h3>'+table(['Preparação','Rendimento','Status','Ação'],rows)+'</div><div id="recipeDetail" class="section"></div>';
+  let idx=0;const addIngredient=()=>{const id=idx++,el=document.createElement('div');el.className='grid';el.style.cssText='grid-template-columns:minmax(0,2fr) minmax(90px,1fr) auto;gap:8px;align-items:end';el.innerHTML='<div class="field"><label>Produto / ingrediente</label><select name="product">'+productOpts+'</select></div><div class="field"><label>Quantidade ('+ 'unidade do produto' +')</label><input name="quantity" type="number" min="0.001" step="0.001" value="1" required></div><button type="button" class="danger" style="margin-bottom:14px">×</button>';el.querySelector('button').onclick=()=>el.remove();$('recipeIngredients').appendChild(el)};
+  $('addIngredient').onclick=addIngredient;addIngredient();
+  $('recipeForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget),els=[...$('recipeIngredients').children];if(!els.length){msg('recipeStatus','Adicione pelo menos um ingrediente.',true);return}
+   const {data:recipe,error}=await supabase.from('recipes').insert({company_id:companyId,unit_id:unitId,name:String(f.get('name')).trim(),description:String(f.get('description')||''),yield_quantity:Number(f.get('yield_quantity')),yield_unit:String(f.get('yield_unit')),preparation:String(f.get('preparation')||''),status:'active',created_by:session.user.id}).select('id').single();
+   if(error){msg('recipeStatus','Erro ao salvar ficha: '+error.message,true);return}
+   const items=els.map(el=>({recipe_id:recipe.id,product_id:el.querySelector('[name=product]').value,quantity:Number(el.querySelector('[name=quantity]').value),unit:products.find(p=>p.id===el.querySelector('[name=product]').value)?.unit_measure||'',unit_cost:0,total_cost:0}));
+   const {error:ie}=await supabase.from('recipe_items').insert(items);if(ie){msg('recipeStatus','Ficha criada, mas houve falha ao gravar ingredientes: '+ie.message,true);return}
+   window.gpCostsTab='recipes';await renderCosts(app);await openRecipe(recipe.id);
+  };
+  app.querySelectorAll('[data-recipe-view]').forEach(b=>b.onclick=()=>openRecipe(b.dataset.recipeView));
+  async function openRecipe(id){const box=$('recipeDetail');if(!box)return;const [{data:r,error:er},{data:items,error:ie}]=await Promise.all([supabase.from('recipes').select('*').eq('id',id).eq('company_id',companyId).single(),supabase.from('recipe_items').select('id,product_id,quantity,unit,unit_cost,total_cost,products(name,unit_measure)').eq('recipe_id',id)]);if(er||ie||!r){box.innerHTML='<div class="notice">Erro ao abrir ficha: '+safe((er||ie)?.message||'não encontrada')+'</div>';return}
+   const [{data:balances}]=await Promise.all([supabase.from('stock_balances').select('product_id,average_cost').eq('unit_id',unitId).in('product_id',(items||[]).map(x=>x.product_id))]);
+   const costs=new Map((balances||[]).map(x=>[x.product_id,Number(x.average_cost||0)]));let total=0;
+   const rows=(items||[]).map(it=>{const unitCost=costs.get(it.product_id)||0,line=unitCost*Number(it.quantity);total+=line;return '<tr><td>'+safe(it.products?.name)+'</td><td>'+Number(it.quantity).toLocaleString('pt-BR')+' '+safe(it.unit)+'</td><td>'+money(unitCost)+'</td><td>'+money(line)+'</td></tr>'}).join('');
+   const unitCost=total/Math.max(Number(r.yield_quantity),0.000001);
+   box.innerHTML='<div class="card"><h3>'+safe(r.name)+'</h3><p class="muted">Custo calculado com custo médio atual do estoque da unidade. Confira se a unidade e a conversão das quantidades são compatíveis.</p>'+table(['Ingrediente','Quantidade','Custo unitário atual','Custo total'],rows)+'<div class="grid section"><div class="kpi card"><small>Custo total da receita</small><b>'+money(total)+'</b></div><div class="kpi card"><small>Custo por '+safe(r.yield_unit)+'</small><b>'+money(unitCost)+'</b></div></div><button class="secondary" id="closeRecipeDetail">Fechar detalhes</button></div>';
+   $('closeRecipeDetail').onclick=()=>{box.innerHTML=''};
+  }
+ }else if(tab==='menu'){
+  const rows=(menu||[]).map(m=>'<tr><td>'+safe(m.name)+'</td><td>'+safe(m.category||'—')+'</td><td>'+money(m.selling_price)+'</td><td>'+(m.active?'Ativo':'Inativo')+'</td></tr>').join('');
+  host.innerHTML='<div class="card"><h3>Novo item do cardápio</h3><form id="menuForm"><div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="field"><label>Nome do prato / item *</label><input name="name" required maxlength="140"></div><div class="field"><label>Categoria</label><input name="category" placeholder="Prato principal, acompanhamento..."></div><div class="field"><label>Preço de venda (R$) *</label><input name="selling_price" type="number" min="0" step="0.01" required></div></div><button type="submit">Cadastrar item</button><div id="menuStatus" class="status"></div></form></div><div class="card section"><h3>Cardápio cadastrado</h3>'+table(['Item','Categoria','Preço','Status'],rows)+'</div><div class="card section"><h3>Vincular ficha técnica ao prato</h3><form id="linkRecipeForm"><div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="field"><label>Item do cardápio</label><select name="menu_item_id" required>'+(menu||[]).map(m=>'<option value="'+m.id+'">'+safe(m.name)+'</option>').join('')+'</select></div><div class="field"><label>Ficha técnica</label><select name="recipe_id" required>'+(recipes||[]).map(r=>'<option value="'+r.id+'">'+safe(r.name)+'</option>').join('')+'</select></div><div class="field"><label>Quantidade de rendimentos por item vendido</label><input name="quantity" type="number" min="0.001" step="0.001" value="1" required></div></div><button type="submit">Vincular ficha</button><div id="linkStatus" class="status"></div></form></div>';
+  $('menuForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const {error}=await supabase.from('menu_items').insert({company_id:companyId,unit_id:unitId,name:String(f.get('name')).trim(),category:String(f.get('category')||''),selling_price:Number(f.get('selling_price')),active:true});if(error){msg('menuStatus','Erro ao cadastrar item: '+error.message,true);return}await renderCosts(app)};
+  const lf=$('linkRecipeForm');if(!menu.length||!recipes.length){lf.querySelector('button').disabled=true;msg('linkStatus','Cadastre ao menos um item de cardápio e uma ficha técnica para realizar o vínculo.')}
+  lf.onsubmit=async e=>{e.preventDefault();const f=new FormData(lf);const {error}=await supabase.from('menu_item_recipes').upsert({company_id:companyId,unit_id:unitId,menu_item_id:String(f.get('menu_item_id')),recipe_id:String(f.get('recipe_id')),quantity:Number(f.get('quantity'))},{onConflict:'menu_item_id,recipe_id'});if(error){msg('linkStatus','Não foi possível vincular: '+error.message,true);return}msg('linkStatus','Ficha técnica vinculada ao item do cardápio.')};
+ }else{
+  const ids=(menu||[]).map(x=>x.id);const [{data:links,error:le},{data:snapshots,error:se}]=await Promise.all([supabase.from('menu_item_recipes').select('menu_item_id,recipe_id,quantity,recipes(name,yield_quantity)').eq('unit_id',unitId),supabase.from('menu_cost_snapshots').select('menu_item_id,recipe_cost,selling_price,food_cost_percent,contribution_margin,calculated_at').eq('unit_id',unitId).order('calculated_at',{ascending:false}).limit(500)]);
+  if(le||se){host.innerHTML='<div class="notice">Erro ao carregar análise: '+safe((le||se).message)+'</div>';return}
+  const latest=new Map();(snapshots||[]).forEach(x=>{if(!latest.has(x.menu_item_id))latest.set(x.menu_item_id,x)});
+  const rows=(menu||[]).map(m=>{const x=latest.get(m.id);return '<tr><td>'+safe(m.name)+'</td><td>'+money(x?.recipe_cost||0)+'</td><td>'+money(m.selling_price)+'</td><td>'+(x?Number(x.food_cost_percent).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%':'—')+'</td><td>'+(x?money(x.contribution_margin):'—')+'</td><td><button class="secondary" data-calc-menu="'+m.id+'">Recalcular</button></td></tr>'}).join('');
+  host.innerHTML='<div class="notice">O CMV é calculado como custo da ficha técnica dividido pelo preço de venda. O cálculo usa o custo médio atual dos ingredientes no estoque. Sem ficha vinculada ou sem saldo/custo médio, não será possível calcular um custo confiável.</div><div class="card section"><h3>CMV por item do cardápio</h3>'+table(['Prato','Custo da receita','Preço de venda','CMV','Margem de contribuição','Ação'],rows)+'</div><div id="calcStatus" class="status"></div>';
+  app.querySelectorAll('[data-calc-menu]').forEach(b=>b.onclick=async()=>{b.disabled=true;const menuId=b.dataset.calcMenu;const {data:mi,error:merr}=await supabase.from('menu_items').select('id,selling_price').eq('id',menuId).eq('unit_id',unitId).single();if(merr||!mi){msg('calcStatus','Não foi possível consultar o item: '+(merr?.message||''),true);b.disabled=false;return}
+   const {data:rs,error:rerr}=await supabase.from('menu_item_recipes').select('quantity,recipes(id,name,yield_quantity)').eq('menu_item_id',menuId).eq('unit_id',unitId);if(rerr||!rs?.length){msg('calcStatus','Vincule ao menos uma ficha técnica antes de calcular.',true);b.disabled=false;return}
+   const recipeIds=rs.map(x=>x.recipes?.id).filter(Boolean);const {data:ri,error:rierr}=await supabase.from('recipe_items').select('recipe_id,product_id,quantity').in('recipe_id',recipeIds);if(rierr){msg('calcStatus','Erro ao consultar ingredientes: '+rierr.message,true);b.disabled=false;return}
+   const productIds=[...new Set((ri||[]).map(x=>x.product_id))];const {data:bal,error:be}=await supabase.from('stock_balances').select('product_id,average_cost').eq('unit_id',unitId).in('product_id',productIds);if(be){msg('calcStatus','Erro ao consultar custos do estoque: '+be.message,true);b.disabled=false;return}
+   const costMap=new Map((bal||[]).map(x=>[x.product_id,Number(x.average_cost||0)]));let cost=0;for(const link of rs){const yieldQty=Number(link.recipes?.yield_quantity||0);if(yieldQty<=0){msg('calcStatus','Ficha técnica com rendimento inválido.',true);b.disabled=false;return}const recipeTotal=(ri||[]).filter(x=>x.recipe_id===link.recipes.id).reduce((sum,x)=>sum+Number(x.quantity)*Number(costMap.get(x.product_id)||0),0);cost+=(recipeTotal/yieldQty)*Number(link.quantity)}
+   const price=Number(mi.selling_price||0),pct=price>0?cost/price*100:0,margin=price-cost;
+   const {error:saveError}=await supabase.from('menu_cost_snapshots').insert({company_id:companyId,unit_id:unitId,menu_item_id:menuId,recipe_cost:Number(cost.toFixed(4)),selling_price:price,food_cost_percent:Number(pct.toFixed(4)),contribution_margin:Number(margin.toFixed(4))});
+   if(saveError){msg('calcStatus','Cálculo realizado, mas não foi possível salvar o histórico: '+saveError.message,true);b.disabled=false;return}
+   msg('calcStatus','CMV calculado e histórico salvo: '+pct.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%.');await renderCosts(app);
+  });
+ }
+}
+
 async function renderGoodsReceipts(app){
  const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
  const statusLabel={in_progress:'Em andamento',pending_validation:'Aguardando validação',finalized:'Finalizado',cancelled:'Cancelado'};
@@ -347,6 +408,7 @@ async function renderGoodsReceipts(app){
 
 if(currentPage==='compras'){await renderPurchases(app);return}
 if(currentPage==='recebimentos'){await renderGoodsReceipts(app);return}
+ if(currentPage==='custos'){await renderCosts(app);return}
 
 if(currentPage==='rh'){await renderHR(app);return}
 async function renderHR(app){
