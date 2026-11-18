@@ -20,7 +20,7 @@ rap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12p
  </div></div>
 <div id="setupView" class="authwrap hidden"><div class="authcard"><div class="authbrand">GESTORPRO<small>CONFIGURAÇÃO INICIAL</small></div><h2>Cadastre sua empresa</h2><p class="muted">Este será o ambiente administrativo inicial da sua organização.</p><form id="setupForm"><div class="field"><label>Nome da empresa</label><input id="companyName" required maxlength="120" placeholder="Ex.: Minha Rede de Restaurantes"></div><div class="field"><label>Nome da primeira unidade</label><input id="unitName" required maxlength="120" placeholder="Ex.: Unidade Matriz"></div><button type="submit">Criar empresa e unidade</button></form><div id="setupStatus" class="status" role="status"></div><button class="secondary" id="setupLogout" type="button">Sair</button></div></div>
 <div id="appView" class="shell hidden">
- <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
+ <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
  <main class="main"><header class="top"><strong id="topTitle">Dashboard gerencial</strong><div class="topright"><select id="unitSelect" aria-label="Selecionar unidade"></select><span id="userLabel"></span><button class="secondary" id="logoutBtn">Sair</button></div></header><div class="content" id="app"></div></main>
 </div>
 <script>
@@ -48,7 +48,7 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 window.__gestorProModuleLoaded=true;
 const $=id=>document.getElementById(id);
 let session=null, memberships=[], units=[], companyId=null, unitId=null, currentPage='dashboard';
-const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',estoque:'Controle de estoque',compras:'Compras',operacao:'Operações',ajuda:'Sobre o sistema'};
+const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',estoque:'Controle de estoque',compras:'Compras',recebimentos:'Recebimentos',rh:'Recursos Humanos',operacao:'Operações',ajuda:'Sobre o sistema'};
 function status(id,msg,kind=''){const el=$(id);el.textContent=msg;el.className='status '+kind}
 function show(view){['authView','setupView','appView'].forEach(id=>$(id).classList.toggle('hidden',id!==view))}
 function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -300,6 +300,103 @@ async function renderGoodsReceipts(app){
 
 if(currentPage==='compras'){await renderPurchases(app);return}
 if(currentPage==='recebimentos'){await renderGoodsReceipts(app);return}
+
+if(currentPage==='rh'){await renderHR(app);return}
+async function renderHR(app){
+ const tabs=[['overview','Painel RH'],['employees','Colaboradores'],['positions','Cargos'],['schedules','Jornadas'],['assignments','Escalas'],['timeclock','Ponto'],['occurrences','Ocorrências'],['leaves','Afastamentos'],['overtime','Horas extras'],['contracts','Contratos'],['reviews','Avaliações']];
+ let tab=window.gpHRTab||'overview';
+ const fmtDate=v=>v?new Date(v+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+ const fmtDateTime=v=>v?new Date(v).toLocaleString('pt-BR'):'—';
+ const empRes=await supabase.from('employees').select('id,full_name,employee_code,employment_status,position_id,hire_date').eq('company_id',companyId).eq('unit_id',unitId).order('full_name').limit(500);
+ if(empRes.error){app.innerHTML='<div class="notice">Erro ao carregar colaboradores: '+safe(empRes.error.message)+'</div>';return}
+ const emps=empRes.data||[], active=emps.filter(e=>e.employment_status==='active').length;
+ const empOpts=emps.map(e=>'<option value="'+e.id+'">'+safe(e.full_name)+' · '+safe(e.employee_code||'sem matrícula')+'</option>').join('');
+ const load=async(table,cols='*',limit=300)=>{const r=await supabase.from(table).select(cols).eq('company_id',companyId).eq('unit_id',unitId).order('created_at',{ascending:false}).limit(limit);return r};
+ const header='<div class="pagehead"><div><h1>Recursos Humanos</h1><div class="sub">Gestão de pessoas, jornadas, frequência e desenvolvimento · '+safe(units.find(u=>u.id===unitId)?.name||'')+'</div></div><span class="pill">'+active+' colaboradores ativos</span></div><div class="toolbar" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px">'+tabs.map(([k,l])=>'<button type="button" class="'+(tab===k?'':'secondary')+'" data-hr-tab="'+k+'">'+l+'</button>').join('')+'</div>';
+ const field=(name,label,type='text',required=false,opts=null,value='')=>'<div class="field"><label>'+label+(required?' *':'')+'</label>'+(opts?'<select name="'+name+'" '+(required?'required':'')+'>'+opts.map(o=>'<option value="'+o[0]+'" '+(String(value)===String(o[0])?'selected':'')+'>'+o[1]+'</option>').join('')+'</select>':'<input name="'+name+'" type="'+type+'" value="'+safe(value)+'" '+(required?'required':'')+'></div>';
+ const formCard=(title,fields,button='Salvar')=>'<div class="card section"><h3>'+title+'</h3><form id="hrForm"><div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+fields.join('')+'</div><div class="authactions"><button type="submit">'+button+'</button><button type="reset" class="secondary">Limpar</button></div><div id="hrStatus" class="status"></div></form></div>';
+ const tableRows=(heads,rows)=>'<div class="tablewrap"><table><thead><tr>'+heads.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows+'</tbody></table>'+ (rows?'':'<div class="empty">Nenhum registro encontrado.</div>')+'</div>';
+ let body='';
+ if(tab==='overview'){
+  const [pos,clocks,leaves,ot,occ,contracts]=await Promise.all([
+   supabase.from('job_positions').select('id',{count:'exact',head:true}).eq('company_id',companyId).eq('active',true),
+   supabase.from('time_clock_records').select('id,event_type,event_at,employees(full_name)').eq('company_id',companyId).eq('unit_id',unitId).gte('event_at',new Date(new Date().setHours(0,0,0,0)).toISOString()).order('event_at',{ascending:false}).limit(12),
+   supabase.from('leave_requests').select('id',{count:'exact',head:true}).eq('company_id',companyId).eq('unit_id',unitId).eq('status','pending'),
+   supabase.from('overtime_records').select('id',{count:'exact',head:true}).eq('company_id',companyId).eq('unit_id',unitId).eq('status','pending'),
+   supabase.from('attendance_occurrences').select('id',{count:'exact',head:true}).eq('company_id',companyId).eq('unit_id',unitId).eq('status','open'),
+   supabase.from('employee_contracts').select('id',{count:'exact',head:true}).eq('company_id',companyId).eq('unit_id',unitId).eq('status','active')
+  ]);
+  const kpis=[['Colaboradores ativos',active],['Cargos ativos',pos.count||0],['Afastamentos aguardando',leaves.count||0],['Horas extras pendentes',ot.count||0],['Ocorrências abertas',occ.count||0],['Contratos ativos',contracts.count||0]];
+  body='<div class="grid">'+kpis.map(x=>'<div class="card kpi"><small>'+x[0]+'</small><b>'+x[1]+'</b></div>').join('')+'</div><div class="card section"><h3>Últimos registros de ponto de hoje</h3>'+tableRows(['Colaborador','Evento','Data e hora'],(clocks.data||[]).map(x=>'<tr><td>'+safe(x.employees?.full_name||'—')+'</td><td>'+safe(({clock_in:'Entrada',break_start:'Início intervalo',break_end:'Fim intervalo',clock_out:'Saída'})[x.event_type]||x.event_type)+'</td><td>'+fmtDateTime(x.event_at)+'</td></tr>').join(''))+'</div><div class="notice section">O painel apresenta os dados gravados na unidade selecionada. Folha de pagamento, cálculo de encargos e integração contábil não fazem parte desta etapa.</div>';
+ }
+ if(tab==='employees'){
+  const positions=await supabase.from('job_positions').select('id,title').eq('company_id',companyId).eq('active',true).order('title');
+  body=formCard('Cadastrar colaborador',[
+   field('full_name','Nome completo','text',true),field('employee_code','Matrícula / código'),field('position_id','Cargo','',false,[['','Selecione'],...(positions.data||[]).map(x=>[x.id,x.title])]),
+   field('email','E-mail','email'),field('phone','Telefone'),field('hire_date','Data de admissão','date'),field('employment_status','Situação','',true,[['active','Ativo'],['on_leave','Afastado'],['terminated','Desligado']]),
+   field('termination_date','Data de desligamento','date'),field('notes','Observações')
+  ])+ '<div class="card section"><h3>Quadro de colaboradores</h3>'+tableRows(['Matrícula','Nome','Cargo','Admissão','Situação'],emps.map(e=>'<tr><td>'+safe(e.employee_code||'—')+'</td><td>'+safe(e.full_name)+'</td><td>'+safe((positions.data||[]).find(p=>p.id===e.position_id)?.title||'—')+'</td><td>'+fmtDate(e.hire_date)+'</td><td>'+safe(({active:'Ativo',on_leave:'Afastado',terminated:'Desligado'})[e.employment_status]||e.employment_status)+'</td></tr>').join(''))+'</div>';
+  bindInsert('employees',formPayload=>({...formPayload,company_id:companyId,unit_id:unitId,employee_code:formPayload.employee_code||null,position_id:formPayload.position_id||null,termination_date:formPayload.termination_date||null}));
+ }
+ if(tab==='positions'){
+  const r=await supabase.from('job_positions').select('*').eq('company_id',companyId).order('title');
+  body=formCard('Novo cargo', [field('title','Nome do cargo','text',true),field('department','Departamento / setor'),field('description','Descrição')])+'<div class="card section"><h3>Cargos cadastrados</h3>'+tableRows(['Cargo','Departamento','Status'],(r.data||[]).map(x=>'<tr><td>'+safe(x.title)+'</td><td>'+safe(x.department||'—')+'</td><td>'+ (x.active?'Ativo':'Inativo')+'</td></tr>').join(''))+'</div>';
+  bindInsert('job_positions',p=>({...p,company_id:companyId,department:p.department||null,description:p.description||null}));
+ }
+ if(tab==='schedules'){
+  const r=await supabase.from('work_schedules').select('*').eq('company_id',companyId).eq('unit_id',unitId).order('name');
+  body=formCard('Cadastrar jornada de trabalho', [field('name','Nome da jornada','text',true),field('weekly_hours','Carga horária semanal (horas)','number',true),field('break_minutes','Intervalo (minutos)','number',true),field('schedule_config','Configuração semanal (JSON)','text')])+'<div class="card section"><h3>Jornadas cadastradas</h3>'+tableRows(['Jornada','Horas semanais','Intervalo','Status'],(r.data||[]).map(x=>'<tr><td>'+safe(x.name)+'</td><td>'+safe(x.weekly_hours)+'</td><td>'+safe(x.break_minutes)+' min</td><td>'+(x.active?'Ativa':'Inativa')+'</td></tr>').join(''))+'</div>';
+  bindInsert('work_schedules',p=>{let config={};if(p.schedule_config){try{config=JSON.parse(p.schedule_config)}catch(e){throw new Error('A configuração semanal precisa ser um JSON válido.')}}return {company_id:companyId,unit_id:unitId,name:p.name,weekly_hours:Number(p.weekly_hours),break_minutes:Number(p.break_minutes),schedule_config:config}});
+ }
+ if(tab==='assignments'){
+  const [schedules,assigned]=await Promise.all([supabase.from('work_schedules').select('id,name').eq('company_id',companyId).eq('unit_id',unitId).eq('active',true).order('name'),supabase.from('employee_schedules').select('*,employees(full_name),work_schedules(name)').eq('company_id',companyId).eq('unit_id',unitId).order('effective_from',{ascending:false}).limit(200)]);
+  body=formCard('Vincular jornada ao colaborador',[field('employee_id','Colaborador','',true,emps.map(x=>[x.id,x.full_name])),field('schedule_id','Jornada','',true,(schedules.data||[]).map(x=>[x.id,x.name])),field('effective_from','Vigência inicial','date',true),field('effective_to','Vigência final (opcional)','date')])+'<div class="card section"><h3>Escalas atribuídas</h3>'+tableRows(['Colaborador','Jornada','Início','Fim'],(assigned.data||[]).map(x=>'<tr><td>'+safe(x.employees?.full_name||'—')+'</td><td>'+safe(x.work_schedules?.name||'—')+'</td><td>'+fmtDate(x.effective_from)+'</td><td>'+fmtDate(x.effective_to)+'</td></tr>').join(''))+'</div>';
+  bindInsert('employee_schedules',p=>({company_id:companyId,unit_id:unitId,employee_id:p.employee_id,schedule_id:p.schedule_id,effective_from:p.effective_from,effective_to:p.effective_to||null,assigned_by:session.user.id}));
+ }
+ if(tab==='timeclock'){
+  const r=await load('time_clock_records','*,employees(full_name)',300);
+  body=formCard('Registrar marcação de ponto',[field('employee_id','Colaborador','',true,emps.map(x=>[x.id,x.full_name])),field('event_type','Tipo de marcação','',true,[['clock_in','Entrada'],['break_start','Início do intervalo'],['break_end','Fim do intervalo'],['clock_out','Saída']]),field('event_at','Data e hora','datetime-local',true),field('notes','Observação')])+'<div class="card section"><h3>Marcações recentes</h3>'+tableRows(['Colaborador','Evento','Data e hora','Origem'],(r.data||[]).map(x=>'<tr><td>'+safe(x.employees?.full_name||'—')+'</td><td>'+safe(({clock_in:'Entrada',break_start:'Início intervalo',break_end:'Fim intervalo',clock_out:'Saída'})[x.event_type]||x.event_type)+'</td><td>'+fmtDateTime(x.event_at)+'</td><td>'+safe(x.source)+'</td></tr>').join(''))+'</div>';
+  bindInsert('time_clock_records',p=>({company_id:companyId,unit_id:unitId,employee_id:p.employee_id,event_type:p.event_type,event_at:new Date(p.event_at).toISOString(),source:'web',notes:p.notes||null,registered_by:session.user.id}));
+ }
+ if(tab==='occurrences'){
+  const r=await load('attendance_occurrences','*,employees(full_name)');
+  body=formCard('Registrar ocorrência',[field('employee_id','Colaborador','',true,emps.map(x=>[x.id,x.full_name])),field('occurrence_type','Tipo','',true,[['absence','Falta'],['late','Atraso'],['early_leave','Saída antecipada'],['medical_leave','Atestado / licença médica'],['other','Outra']]),field('starts_at','Início','datetime-local',true),field('ends_at','Fim','datetime-local'),field('reason','Justificativa / descrição','text',true)])+'<div class="card section"><h3>Ocorrências registradas</h3>'+tableRows(['Colaborador','Tipo','Início','Status','Descrição'],(r.data||[]).map(x=>'<tr><td>'+safe(x.employees?.full_name||'—')+'</td><td>'+safe(x.occurrence_type)+'</td><td>'+fmtDateTime(x.starts_at)+'</td><td>'+safe(x.status)+'</td><td>'+safe(x.reason||'—')+'</td></tr>').join(''))+'</div>';
+  bindInsert('attendance_occurrences',p=>({company_id:companyId,unit_id:unitId,employee_id:p.employee_id,occurrence_type:p.occurrence_type,starts_at:new Date(p.starts_at).toISOString(),ends_at:p.ends_at?new Date(p.ends_at).toISOString():null,reason:p.reason,recorded_by:session.user.id}));
+ }
+ if(tab==='leaves'){
+  const r=await load('leave_requests','*,employees(full_name)');
+  body=formCard('Registrar solicitação de afastamento',[field('employee_id','Colaborador','',true,emps.map(x=>[x.id,x.full_name])),field('leave_type','Tipo','',true,[['vacation','Férias'],['medical','Médico'],['personal','Pessoal'],['maternity_paternity','Maternidade / paternidade'],['unpaid','Não remunerado'],['other','Outro']]),field('starts_on','Data inicial','date',true),field('ends_on','Data final','date',true),field('reason','Motivo / observação')])+'<div class="card section"><h3>Solicitações</h3>'+tableRows(['Colaborador','Tipo','Período','Status','Ação'],(r.data||[]).map(x=>'<tr><td>'+safe(x.employees?.full_name||'—')+'</td><td>'+safe(x.leave_type)+'</td><td>'+fmtDate(x.starts_on)+' a '+fmtDate(x.ends_on)+'</td><td>'+safe(x.status)+'</td><td>'+(x.status==='pending'?'<button class="secondary" data-leave="'+x.id+'" data-status="approved">Aprovar</button> <button class="danger" data-leave="'+x.id+'" data-status="rejected">Rejeitar</button>':'—')+'</td></tr>').join(''))+'</div>';
+  bindInsert('leave_requests',p=>({company_id:companyId,unit_id:unitId,employee_id:p.employee_id,leave_type:p.leave_type,starts_on:p.starts_on,ends_on:p.ends_on,reason:p.reason||null}));
+  app.querySelectorAll('[data-leave]').forEach(b=>b.addEventListener('click',async()=>{const {error}=await supabase.from('leave_requests').update({status:b.dataset.status,reviewed_by:session.user.id,reviewed_at:new Date().toISOString()}).eq('id',b.dataset.leave).eq('company_id',companyId).eq('unit_id',unitId).eq('status','pending');if(error)alert('Não foi possível atualizar: '+error.message);else render()}));
+ }
+ if(tab==='overtime'){
+  const r=await load('overtime_records','*,employees(full_name)');
+  body=formCard('Lançar horas extras',[field('employee_id','Colaborador','',true,emps.map(x=>[x.id,x.full_name])),field('work_date','Data','date',true),field('minutes','Quantidade de minutos','number',true),field('reason','Motivo','text',true)])+'<div class="card section"><h3>Banco de horas / horas extras</h3>'+tableRows(['Colaborador','Data','Tempo','Status','Ação'],(r.data||[]).map(x=>'<tr><td>'+safe(x.employees?.full_name||'—')+'</td><td>'+fmtDate(x.work_date)+'</td><td>'+Math.floor(x.minutes/60)+'h '+(x.minutes%60)+'min</td><td>'+safe(x.status)+'</td><td>'+(x.status==='pending'?'<button class="secondary" data-ot="'+x.id+'" data-status="approved">Aprovar</button> <button class="danger" data-ot="'+x.id+'" data-status="rejected">Rejeitar</button>':'—')+'</td></tr>').join(''))+'</div>';
+  bindInsert('overtime_records',p=>({company_id:companyId,unit_id:unitId,employee_id:p.employee_id,work_date:p.work_date,minutes:Number(p.minutes),reason:p.reason,status:'pending'}));
+  app.querySelectorAll('[data-ot]').forEach(b=>b.addEventListener('click',async()=>{const {error}=await supabase.from('overtime_records').update({status:b.dataset.status,approved_by:session.user.id,approved_at:new Date().toISOString()}).eq('id',b.dataset.ot).eq('company_id',companyId).eq('unit_id',unitId).eq('status','pending');if(error)alert('Não foi possível atualizar: '+error.message);else render()}));
+ }
+ if(tab==='contracts'){
+  const r=await load('employee_contracts','*,employees(full_name)');
+  body=formCard('Cadastrar contrato',[field('employee_id','Colaborador','',true,emps.map(x=>[x.id,x.full_name])),field('contract_type','Tipo de contrato','',true,[['indefinite','Prazo indeterminado'],['fixed_term','Prazo determinado'],['temporary','Temporário'],['intermittent','Intermitente'],['apprentice','Aprendiz'],['internship','Estágio'],['other','Outro']]),field('start_date','Início','date',true),field('end_date','Término','date'),field('probation_end_date','Fim da experiência','date'),field('weekly_hours','Horas semanais','number'),field('status','Situação','',true,[['active','Ativo'],['ended','Encerrado'],['suspended','Suspenso']]),field('notes','Observações')])+'<div class="card section"><h3>Contratos</h3>'+tableRows(['Colaborador','Tipo','Início','Fim','Status'],(r.data||[]).map(x=>'<tr><td>'+safe(x.employees?.full_name||'—')+'</td><td>'+safe(x.contract_type)+'</td><td>'+fmtDate(x.start_date)+'</td><td>'+fmtDate(x.end_date)+'</td><td>'+safe(x.status)+'</td></tr>').join(''))+'</div>';
+  bindInsert('employee_contracts',p=>({company_id:companyId,unit_id:unitId,employee_id:p.employee_id,contract_type:p.contract_type,start_date:p.start_date,end_date:p.end_date||null,probation_end_date:p.probation_end_date||null,weekly_hours:p.weekly_hours?Number(p.weekly_hours):null,status:p.status,notes:p.notes||null,created_by:session.user.id}));
+ }
+ if(tab==='reviews'){
+  const r=await load('performance_reviews','*,employees(full_name)');
+  body=formCard('Registrar avaliação de desempenho',[field('employee_id','Colaborador','',true,emps.map(x=>[x.id,x.full_name])),field('period_start','Início do período','date',true),field('period_end','Fim do período','date',true),field('score','Nota (0 a 100)','number'),field('strengths','Pontos fortes'),field('improvement_points','Pontos a desenvolver'),field('action_plan','Plano de ação')])+'<div class="card section"><h3>Avaliações</h3>'+tableRows(['Colaborador','Período','Nota','Pontos fortes'],(r.data||[]).map(x=>'<tr><td>'+safe(x.employees?.full_name||'—')+'</td><td>'+fmtDate(x.period_start)+' a '+fmtDate(x.period_end)+'</td><td>'+safe(x.score??'—')+'</td><td>'+safe(x.strengths||'—')+'</td></tr>').join(''))+'</div>';
+  bindInsert('performance_reviews',p=>({company_id:companyId,unit_id:unitId,employee_id:p.employee_id,reviewer_id:session.user.id,period_start:p.period_start,period_end:p.period_end,score:p.score===''?null:Number(p.score),strengths:p.strengths||null,improvement_points:p.improvement_points||null,action_plan:p.action_plan||null}));
+ }
+ app.innerHTML=header+body;
+ app.querySelectorAll('[data-hr-tab]').forEach(b=>b.addEventListener('click',()=>{window.gpHRTab=b.dataset.hrTab;render()}));
+ function bindInsert(tableName,build){
+  const form=$('hrForm');if(!form)return;
+  form.addEventListener('submit',async e=>{e.preventDefault();const fd=new FormData(form),raw={};for(const [k,v] of fd.entries())raw[k]=String(v).trim();
+   let payload;try{payload=build(raw)}catch(err){$('hrStatus').textContent=err.message;$('hrStatus').className='status red';return}
+   const {error}=await supabase.from(tableName).insert(payload);if(error){$('hrStatus').textContent='Não foi possível salvar: '+error.message;$('hrStatus').className='status red';return}
+   $('hrStatus').textContent='Registro salvo com sucesso.';$('hrStatus').className='status green';form.reset();await render();
+  });
+ }
+}
+
 if(currentPage==='operacao'){app.innerHTML='<div class="pagehead"><div><h1>Operações</h1><div class="sub">Inventários, recebimentos, qualidade, RH e manutenção.</div></div></div><div class="notice">As tabelas e regras do backend estão preparadas; as telas operacionais serão conectadas módulo a módulo e testadas antes do uso real.</div>';return}
 if(currentPage==='ajuda'){app.innerHTML='<div class="card"><h2>GestorPro conectado ao Supabase</h2><p>Login real, sessão autenticada, empresa, unidade e leitura do dashboard estão integrados nesta primeira etapa.</p><p class="notice">Ainda não é uma versão pronta para operação: cadastros, estoque, compras, recebimento e demais processos precisam de suas telas de gravação, validação e testes.</p></div>';return}}
 supabase.auth.onAuthStateChange((_event,s)=>{if(!s){session=null;show('authView')} });
