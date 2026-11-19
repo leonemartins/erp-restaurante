@@ -292,7 +292,7 @@ async function renderPurchases(app){
 
 async function renderCosts(app){
  const tab=window.gpCostsTab||'recipes';
- const tabs=[['recipes','Fichas técnicas'],['menu','Cardápio'],['analysis','Análise de CMV']];
+ const tabs=[['recipes','Fichas técnicas'],['menu','Cardápio'],['overview','CMV mensal'],['analysis','Engenharia de cardápio']];
  const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
  const [{data:products,error:pe},{data:recipes,error:re},{data:menu,error:me}]=await Promise.all([
   supabase.from('products').select('id,name,unit_measure,active').eq('company_id',companyId).eq('active',true).order('name'),
@@ -333,6 +333,27 @@ async function renderCosts(app){
   $('menuForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const {error}=await supabase.from('menu_items').insert({company_id:companyId,unit_id:unitId,name:String(f.get('name')).trim(),category:String(f.get('category')||''),selling_price:Number(f.get('selling_price')),active:true});if(error){msg('menuStatus','Erro ao cadastrar item: '+error.message,true);return}await renderCosts(app)};
   const lf=$('linkRecipeForm');if(!menu.length||!recipes.length){lf.querySelector('button').disabled=true;msg('linkStatus','Cadastre ao menos um item de cardápio e uma ficha técnica para realizar o vínculo.')}
   lf.onsubmit=async e=>{e.preventDefault();const f=new FormData(lf);const {error}=await supabase.from('menu_item_recipes').upsert({company_id:companyId,unit_id:unitId,menu_item_id:String(f.get('menu_item_id')),recipe_id:String(f.get('recipe_id')),quantity:Number(f.get('quantity'))},{onConflict:'menu_item_id,recipe_id'});if(error){msg('linkStatus','Não foi possível vincular: '+error.message,true);return}msg('linkStatus','Ficha técnica vinculada ao item do cardápio.')};
+ }else if(tab==='overview'){
+  const now=new Date(),monthStart=new Date(now.getFullYear(),now.getMonth(),1),nextMonth=new Date(now.getFullYear(),now.getMonth()+1,1);
+  const isoStart=monthStart.toISOString(),isoEnd=nextMonth.toISOString(),dateLabel=monthStart.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  const [{data:sales,error:salesErr},{data:losses,error:lossErr},{data:goals,error:goalErr},{data:snapshots,error:snapErr}]=await Promise.all([
+   supabase.from('v_sales_rows_mapped').select('menu_item_id,quantity,net_amount,is_mapped,sold_at').eq('company_id',companyId).eq('unit_id',unitId).gte('sold_at',isoStart).lt('sold_at',isoEnd).limit(20000),
+   supabase.from('stock_losses').select('quantity,unit_cost,reason,created_at').eq('company_id',companyId).eq('unit_id',unitId).gte('created_at',isoStart).lt('created_at',isoEnd).limit(10000),
+   supabase.from('goals').select('target_value,title').eq('company_id',companyId).eq('unit_id',unitId).eq('indicator','cmv_teorico_percent').order('created_at',{ascending:false}).limit(1),
+   supabase.from('menu_cost_snapshots').select('menu_item_id,recipe_cost,calculated_at').eq('company_id',companyId).eq('unit_id',unitId).order('calculated_at',{ascending:false}).limit(5000)
+  ]);
+  const err=salesErr||lossErr||goalErr||snapErr;if(err){host.innerHTML='<div class="notice">Não foi possível montar o painel mensal: '+safe(err.message)+'</div>';return}
+  const latest=new Map();(snapshots||[]).forEach(x=>{if(!latest.has(x.menu_item_id))latest.set(x.menu_item_id,Number(x.recipe_cost||0))});
+  let salesNet=0,coveredSales=0,theoreticalCost=0,unmappedSales=0,unpricedSales=0,qtySold=0;
+  (sales||[]).forEach(x=>{const net=Number(x.net_amount||0),qty=Number(x.quantity||0);salesNet+=net;if(!x.is_mapped||!x.menu_item_id){unmappedSales+=net;return}if(!latest.has(x.menu_item_id)){unpricedSales+=net;return}coveredSales+=net;qtySold+=qty;theoreticalCost+=latest.get(x.menu_item_id)*qty});
+  const lossCost=(losses||[]).reduce((sum,x)=>sum+Number(x.quantity||0)*Number(x.unit_cost||0),0);
+  const target=goals?.length?Number(goals[0].target_value):null,cmv=coveredSales>0?theoreticalCost/coveredSales*100:null,coverage=salesNet>0?coveredSales/salesNet*100:0;
+  const brl=v=>money(v),pct=v=>v===null?'—':Number(v).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+  const rows=[['Vendas líquidas importadas',brl(salesNet)],['Vendas com custo de ficha disponível',brl(coveredSales)],['Custo teórico das vendas cobertas',brl(theoreticalCost)],['CMV teórico estimado',pct(cmv)],['Cobertura de vendas com custo',pct(coverage)],['Perdas registradas no estoque',brl(lossCost)],['Vendas sem mapeamento',brl(unmappedSales)],['Vendas sem custo calculado',brl(unpricedSales)]];
+  const lossRows=(losses||[]).reduce((m,x)=>{const k=x.reason||'Não informado';m.set(k,(m.get(k)||0)+Number(x.quantity||0)*Number(x.unit_cost||0));return m},new Map());
+  const lossTable=[...lossRows].sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<tr><td>'+safe(k)+'</td><td>'+money(v)+'</td></tr>').join('');
+  const status=cmv===null||target===null?'Meta ou dados insuficientes para comparação.':cmv>target?'CMV estimado acima da meta.':'CMV estimado dentro da meta.';
+  host.innerHTML='<div class="notice">Período: '+safe(dateLabel)+'. O CMV apresentado é uma estimativa teórica: usa custo da última ficha calculada multiplicado pelas quantidades vendidas no período. Perdas registradas são mostradas separadamente e não são somadas ao CMV para evitar dupla contagem. Não representa CMV contábil/real sem conciliação completa de estoque e compras.</div><div class="grid"><div class="card kpi"><small>Venda líquida</small><b>'+brl(salesNet)+'</b></div><div class="card kpi"><small>CMV teórico estimado</small><b>'+pct(cmv)+'</b></div><div class="card kpi"><small>Meta de CMV</small><b>'+pct(target)+'</b></div><div class="card kpi"><small>Perdas registradas</small><b>'+brl(lossCost)+'</b></div></div><div class="card section"><h3>Acompanhamento mensal</h3>'+table(['Indicador','Resultado'],rows)+'<p class="muted">'+safe(status)+' '+(goals?.[0]?.title?'Meta: '+safe(goals[0].title):'Cadastre a meta em Metas para habilitar a comparação.')+'</p></div><div class="card section"><h3>Perdas por motivo</h3>'+table(['Motivo','Valor registrado'],lossTable||'<tr><td colspan="2">Nenhuma perda registrada no período.</td></tr>')+'</div><div class="card section"><h3>Como melhorar a confiabilidade</h3><ul><li>Mapear todos os produtos importados para os itens corretos do cardápio.</li><li>Manter fichas técnicas e custos médios atualizados.</li><li>Registrar perdas no momento da ocorrência, com quantidade e motivo.</li><li>Conferir inventários e recebimentos para conciliar o CMV real.</li></ul><p class="muted">Cobertura de vendas com custo: '+pct(coverage)+'. Vendas sem mapeamento: '+brl(unmappedSales)+'; vendas sem custo: '+brl(unpricedSales)+'.</p></div>';
  }else{
   const [{data:snapshots,error:se},{data:performance,error:pe}]=await Promise.all([
    supabase.from('menu_cost_snapshots').select('menu_item_id,recipe_cost,selling_price,food_cost_percent,contribution_margin,calculated_at').eq('company_id',companyId).eq('unit_id',unitId).order('calculated_at',{ascending:false}).limit(5000),
