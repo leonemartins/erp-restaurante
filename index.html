@@ -308,7 +308,7 @@ async function renderPurchases(app){
 
 async function renderCosts(app){
  const tab=window.gpCostsTab||'recipes';
- const tabs=[['recipes','Fichas técnicas'],['production','Produção'],['menu','Cardápio'],['overview','CMV mensal'],['analysis','Engenharia de cardápio']];
+ const tabs=[['recipes','Fichas técnicas'],['production','Produção'],['reports','Relatórios de produção'],['menu','Cardápio'],['overview','CMV mensal'],['analysis','Engenharia de cardápio']];
  const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
  const [{data:products,error:pe},{data:recipes,error:re},{data:menu,error:me}]=await Promise.all([
   supabase.from('products').select('id,name,unit_measure,active').eq('company_id',companyId).eq('active',true).order('name'),
@@ -328,8 +328,8 @@ async function renderCosts(app){
   $('recipeForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget),els=[...$('recipeIngredients').children];if(!els.length){msg('recipeStatus','Adicione pelo menos um ingrediente.',true);return}
    const {data:recipe,error}=await supabase.from('recipes').insert({company_id:companyId,unit_id:unitId,name:String(f.get('name')).trim(),description:String(f.get('description')||''),yield_quantity:Number(f.get('yield_quantity')),yield_unit:String(f.get('yield_unit')),preparation:String(f.get('preparation')||''),status:'active',created_by:session.user.id}).select('id').single();
    if(error){msg('recipeStatus','Erro ao salvar ficha: '+error.message,true);return}
-   const items=els.map(el=>({recipe_id:recipe.id,product_id:el.querySelector('[name=product]').value,quantity:Number(el.querySelector('[name=quantity]').value),unit:products.find(p=>p.id===el.querySelector('[name=product]').value)?.unit_measure||'',unit_cost:0,total_cost:0}));
-   const {error:ie}=await supabase.from('recipe_items').insert(items);if(ie){msg('recipeStatus','Ficha criada, mas houve falha ao gravar ingredientes: '+ie.message,true);return}
+   const items=els.map(el=>({product_id:el.querySelector('[name=product]').value,quantity:Number(el.querySelector('[name=quantity]').value),unit:products.find(p=>p.id===el.querySelector('[name=product]').value)?.unit_measure||''}));
+   const {error:ie}=await supabase.rpc('save_recipe_version',{p_recipe_id:recipe.id,p_name:String(f.get('name')).trim(),p_description:String(f.get('description')||''),p_yield_quantity:Number(f.get('yield_quantity')),p_yield_unit:String(f.get('yield_unit')),p_preparation:String(f.get('preparation')||''),p_ingredients:items});if(ie){msg('recipeStatus','Ficha criada, mas não foi possível gravar a versão: '+ie.message,true);return}
    window.gpCostsTab='recipes';await renderCosts(app);await openRecipe(recipe.id);
   };
   app.querySelectorAll('[data-recipe-view]').forEach(b=>b.onclick=()=>openRecipe(b.dataset.recipeView));
