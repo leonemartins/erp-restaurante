@@ -277,7 +277,7 @@ if(tab==='users'){
   if(tab==='structures'&&payload.parent_id===editingId){$('cadFormStatus').textContent='Uma estrutura não pode ser superior a ela mesma.';$('cadFormStatus').className='status red';btn.disabled=false;return}
   if(!editingId){if(['products','suppliers','external_users','structures','agreements','services'].includes(tab))payload.active=true;if(tab==='employees')payload.employment_status=payload.employment_status||'active'}
   let query=editingId?supabase.from(cfg.table).update(payload).eq('id',editingId).eq('company_id',companyId):supabase.from(cfg.table).insert(payload);
-  if(tab==='employees')query=query.eq('unit_id',unitId);
+  if(tab==='employees'&&editingId)query=query.eq('unit_id',unitId);
   const {error}=await query;
   if(error){$('cadFormStatus').textContent='Erro ao salvar: '+error.message;$('cadFormStatus').className='status red';btn.disabled=false;return}
   $('cadFormStatus').textContent='Cadastro salvo com sucesso.';$('cadFormStatus').className='status green';await render();
