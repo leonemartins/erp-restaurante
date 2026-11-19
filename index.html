@@ -989,7 +989,7 @@ async function renderMaintenance(app){
  if(outRes.error){app.innerHTML='<div class="notice red">'+safe(outRes.error.message)+'</div>';return}
  const OUT=outRes.data||[];
  const tab=window.gpMaintenanceTab||'overview',money=n=>(Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}),date=x=>x?new Date(x).toLocaleDateString('pt-BR'):'—',dt=x=>x?new Date(x).toLocaleString('pt-BR'):'—';
- const used=id=>PT.filter(x=>x.work_order_id===id).reduce((n,x)=>n+Number(x.quantity)*Number(x.unit_cost),0),cost=x=>Number(x.labor_cost||0)+Number(x.service_cost||0)+used(x.id);
+ const used=id=>PT.filter(x=>x.work_order_id===id).reduce((n,x)=>{const returned=RT.filter(r=>r.part_use_id===x.id).reduce((q,r)=>q+Number(r.quantity),0);return n+Math.max(0,Number(x.quantity)-returned)*Number(x.unit_cost)},0),cost=x=>Number(x.labor_cost||0)+Number(x.service_cost||0)+used(x.id);
  const opts=list=>list.map(x=>'<option value="'+safe(x[0])+'">'+safe(x[1])+'</option>').join('');
  const fld=(n,l,type,required,list)=>'<div class="field"><label>'+l+'</label>'+(list?'<select name="'+n+'" '+(required?'required':'')+'>'+opts(list)+'</select>':'<input name="'+n+'" type="'+(type||'text')+'" '+(required?'required':'')+' step="any">')+'</div>';
  const tbl=(heads,rows)=>'<div class="tablewrap"><table><thead><tr>'+heads.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+rows+'</tbody></table>'+(rows?'':'<div class="empty">Nenhum registro.</div>')+'</div>';
