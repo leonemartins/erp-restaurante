@@ -387,20 +387,15 @@ async function renderCosts(app){
    const status=$('historicalForecastStatus'),date=$('dailyPlanForm').elements.plan_date.value,shift=$('dailyPlanForm').elements.shift.value;
    if(!date){status.textContent='Informe a data do planejamento.';return}
    if(!['almoco','jantar'].includes(shift)){status.textContent='A previsão histórica automática está disponível para almoço e jantar.';return}
-   const target=new Date(date+'T12:00:00'),dow=target.getDay(),from=new Date(target);from.setDate(from.getDate()-56);
-   const fromText=from.toISOString().slice(0,10),toText=date;
    status.textContent='Consultando histórico das últimas 8 semanas…';
-   const {data:history,error}=await supabase.from('v_sales_rows_mapped').select('sold_at,quantity,menu_item_id,is_mapped').eq('company_id',companyId).eq('unit_id',unitId).gte('sold_at',fromText+'T00:00:00').lt('sold_at',toText+'T23:59:59').eq('is_mapped',true).limit(20000);
+   const {data:history,error}=await supabase.rpc('suggest_production_menu_forecast',{p_unit_id:unitId,p_target_date:date,p_shift:shift,p_lookback_days:56});
    if(error){status.textContent='Não foi possível consultar o histórico: '+error.message;return}
-   const buckets=new Map(),days=new Set();
-   (history||[]).forEach(row=>{const dt=new Date(row.sold_at),hour=dt.getHours(),period=shift==='almoco'?(hour>=10&&hour<16):(hour>=17&&hour<23);if(!period||dt.getDay()!==dow||!row.menu_item_id)return;const day=dt.toISOString().slice(0,10);days.add(day);const k=row.menu_item_id;buckets.set(k,(buckets.get(k)||0)+Number(row.quantity||0))});
-   const dayCount=days.size;if(!dayCount){status.textContent='Sem histórico importado e vinculado para este dia da semana e turno. Importe vendas e vincule os produtos ao cardápio; por enquanto, informe as porções manualmente.';return}
-   let suggestedTotal=0,matched=0;
-   menuActive.forEach(m=>{const total=buckets.get(m.id)||0,avg=total/dayCount,input=$('dailyPlanForm').elements['servings_'+m.id];if(input){const suggestion=Math.round(avg);input.value=suggestion;if(suggestion>0)matched++;suggestedTotal+=suggestion}});
+   if(!history||!history.length){status.textContent='Sem histórico importado e vinculado para este dia da semana e turno. Importe vendas e vincule os produtos ao cardápio; por enquanto, informe as porções manualmente.';return}
+   const byMenu=new Map(history.map(x=>[x.menu_item_id,x]));let suggestedTotal=0,matched=0,days=0;
+   menuActive.forEach(m=>{const record=byMenu.get(m.id),input=$('dailyPlanForm').elements['servings_'+m.id];if(input){const suggestion=Math.round(Number(record?.average_quantity||0));input.value=suggestion;if(suggestion>0)matched++;suggestedTotal+=suggestion;if(record)days=Math.max(days,Number(record.days_count||0))}});
    if(matched===0){status.textContent='Há registros no período, mas nenhum item vendido está vinculado aos itens ativos do cardápio. Revise os vínculos de vendas.';return}
-   $('dailyPlanForm').elements.forecast_meals.value=suggestedTotal||1;
-   calculatedPlan=null;
-   status.textContent='Sugestão aplicada: '+suggestedTotal+' unidades/porções estimadas a partir de '+dayCount+' dia(s) comparável(is). Ajuste os itens conforme a previsão operacional e clique em Calcular ingredientes.';
+   $('dailyPlanForm').elements.forecast_meals.value=suggestedTotal||1;calculatedPlan=null;
+   status.textContent='Sugestão aplicada: '+suggestedTotal+' unidades/porções estimadas a partir de até '+days+' ocorrência(s) do mesmo dia da semana. Não representa contagem de clientes únicos. Ajuste as quantidades e clique em Calcular ingredientes.';
   });
   $('calculateDailyPlan')?.addEventListener('click',calculatePlan);
   $('dailyPlanForm')?.querySelectorAll('input').forEach(el=>el.addEventListener('change',()=>{calculatedPlan=null}));
