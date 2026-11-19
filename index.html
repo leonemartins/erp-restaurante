@@ -64,7 +64,7 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 window.__gestorProModuleLoaded=true;
 const $=id=>document.getElementById(id);
 let session=null, memberships=[], units=[], companyId=null, unitId=null, currentPage='dashboard', currentRole=null;
-const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',estoque:'Controle de estoque',compras:'Compras',recebimentos:'Recebimentos',custos:'CMV e Custos',nutricao:'Módulo Nutricional',rh:'Recursos Humanos',relatorios:'Relatórios e auditoria',alertas:'Central de alertas',aprovacoes:'Centro de aprovações',notificacoes:'Central de notificações',seguranca:'Segurança e acessos',operacao:'Operações',ajuda:'Sobre o sistema'};
+const titles={dashboard:'Dashboard gerencial',cadastros:'Cadastros',manutencao:'Manutenção e patrimônio',estoque:'Controle de estoque',compras:'Compras',recebimentos:'Recebimentos',custos:'CMV e Custos',nutricao:'Módulo Nutricional',rh:'Recursos Humanos',relatorios:'Relatórios e auditoria',alertas:'Central de alertas',aprovacoes:'Centro de aprovações',notificacoes:'Central de notificações',seguranca:'Segurança e acessos',operacao:'Operações',ajuda:'Sobre o sistema'};
 function status(id,msg,kind=''){const el=$(id);el.textContent=msg;el.className='status '+kind}
 function show(view){['authView','setupView','appView'].forEach(id=>$(id).classList.toggle('hidden',id!==view))}
 function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -117,7 +117,7 @@ async function renderFoodSafety(app){
  $('tempList').innerHTML=tr.error?esc(tr.error.message):(tr.data||[]).map(x=>'<div class="rowline"><b>'+esc(x.area)+'</b> · '+esc(x.equipment||x.product_name||'—')+' · '+esc(x.measured_temperature)+' °C · '+(x.is_compliant===false?'<b class="danger">Fora do limite</b>':'Conforme')+' <small>'+new Date(x.recorded_at).toLocaleString('pt-BR')+'</small></div>').join('')||'Sem medições.';
  await renderQualityReports(app);
 }
-async function render(){const app=$('app');app.innerHTML='<div class="notice">Carregando dados seguros da unidade...</div>';if(currentPage==='alertas'){await renderAlerts(app);return}if(currentPage==='aprovacoes'){await renderApprovals(app);return}if(currentPage==='notificacoes'){await renderNotifications(app);return}if(currentPage==='nutricao'){await renderNutrition(app);return}if(currentPage==='qualidade'){await renderFoodSafety(app);return}if(currentPage==='seguranca'){await renderSecurity(app);return}if(currentPage==='dashboard'){
+async function render(){const app=$('app');app.innerHTML='<div class="notice">Carregando dados seguros da unidade...</div>';if(currentPage==='alertas'){await renderAlerts(app);return}if(currentPage==='aprovacoes'){await renderApprovals(app);return}if(currentPage==='notificacoes'){await renderNotifications(app);return}if(currentPage==='nutricao'){await renderNutrition(app);return}if(currentPage==='qualidade'){await renderFoodSafety(app);return}if(currentPage==='seguranca'){await renderSecurity(app);return}if(currentPage==='manutencao'){await renderMaintenance(app);return}if(currentPage==='dashboard'){
  const {data,error}=await supabase.from('v_management_unit_dashboard').select('*').eq('unit_id',unitId).maybeSingle();
  if(error){app.innerHTML=`<div class="notice">Não foi possível carregar o dashboard: ${safe(error.message)}</div>`;return}
  const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
