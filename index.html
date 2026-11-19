@@ -683,6 +683,49 @@ if(currentPage==='relatorios'){await renderReports(app);return}
 
 if(currentPage==='rh'){await renderHR(app);return}
 
+async function renderOperations(app){
+ const fmt=v=>Number(v||0).toLocaleString('pt-BR'),unitName=units.find(x=>x.id===unitId)?.name||'Unidade atual';
+ app.innerHTML='<div class="pagehead"><div><h1>Central de Operações</h1><div class="sub">Acompanhamento integrado de estoque, inventários, recebimentos, qualidade, pessoas e manutenção · '+safe(unitName)+'</div></div><button id="opsRefresh" class="secondary">Atualizar painel</button></div><div id="opsStatus" class="status">Consultando indicadores da unidade...</div><div id="opsKpis" class="grid"></div><div class="card section"><h3>Fluxos operacionais</h3><p class="muted">Acesse diretamente as rotinas existentes no GestorPro. Os indicadores abaixo são somente leitura e respeitam a unidade selecionada.</p><div id="opsModules" class="grid"></div></div><div class="card section"><h3>Pendências que exigem acompanhamento</h3><div id="opsPending">Carregando...</div></div>';
+ const go=(page,sub)=>{if(sub==='inventory')window.gpStockTab='inventory';currentPage=page;document.querySelectorAll('#nav [data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));$('topTitle').textContent=titles[page]||'GestorPro';render()};
+ $('opsRefresh').addEventListener('click',()=>renderOperations(app));
+ const {data:d,error}=await supabase.from('v_management_unit_dashboard').select('*').eq('unit_id',unitId).maybeSingle();
+ if(error){$('opsStatus').textContent='Não foi possível carregar os indicadores: '+error.message;$('opsStatus').className='status red';$('opsKpis').innerHTML='';$('opsPending').textContent='Verifique a conexão e as permissões da unidade.';return}
+ $('opsStatus').textContent='Indicadores atualizados em '+new Date().toLocaleString('pt-BR');$('opsStatus').className='status green';
+ const metrics=[
+ ['Funcionários ativos',d?.active_employees,'RH','rh'],
+ ['Itens abaixo do estoque mínimo',d?.products_below_minimum,'Estoque','estoque'],
+ ['Inventários em andamento',d?.inventories_in_progress,'Inventários','inventory'],
+ ['Inventários aguardando aprovação',d?.inventories_pending_approval,'Aprovar inventários','inventory'],
+ ['Recebimentos aguardando validação',d?.receipts_pending_validation,'Recebimentos','recebimentos'],
+ ['Não conformidades abertas',d?.open_nonconformities,'Qualidade','qualidade'],
+ ['Ordens de manutenção abertas',d?.open_maintenance_orders,'Manutenção','manutencao'],
+ ['Ocorrências de ponto em aberto',d?.open_attendance_occurrences,'Ocorrências de RH','rh']
+ ];
+ $('opsKpis').innerHTML=metrics.map((m,i)=>'<button type="button" class="card kpi secondary" data-ops-go="'+m[3]+'" style="text-align:left;cursor:pointer"><small>'+m[0]+'</small><b style="font-size:25px">'+fmt(m[1])+'</b><small>Abrir '+m[2]+' →</small></button>').join('');
+ const modules=[
+ ['Inventários','Contagem, conferência e aprovação de estoque','estoque','inventory','📋'],
+ ['Recebimentos','Conferência, divergências e validação de pedidos','recebimentos','','📦'],
+ ['Qualidade','Checklists, não conformidades e ações corretivas','qualidade','','🛡️'],
+ ['Recursos Humanos','Jornada, ponto, ocorrências e solicitações','rh','','👥'],
+ ['Manutenção','Ordens de serviço, ativos e planos preventivos','manutencao','','🔧'],
+ ['Estoque','Saldos, movimentações, perdas e transferências','estoque','','📦']
+ ];
+ $('opsModules').innerHTML=modules.map(m=>'<button type="button" class="card secondary" data-ops-module="'+m[2]+'" data-ops-sub="'+m[3]+'" style="text-align:left;min-height:112px"><b>'+m[4]+' '+m[0]+'</b><small style="display:block;margin-top:8px;white-space:normal">'+m[1]+'</small><small style="display:block;margin-top:8px">Abrir módulo →</small></button>').join('');
+ const pending=[
+ ['Recebimentos pendentes',d?.receipts_pending_validation,'recebimentos',''],
+ ['Inventários para aprovação',d?.inventories_pending_approval,'estoque','inventory'],
+ ['Estoque abaixo do mínimo',d?.products_below_minimum,'estoque',''],
+ ['Não conformidades críticas',d?.critical_nonconformities,'qualidade',''],
+ ['Ações corretivas vencidas',d?.overdue_corrective_actions,'qualidade',''],
+ ['Manutenções atrasadas',d?.overdue_maintenance_orders,'manutencao',''],
+ ['Manutenções preventivas próximas/vencidas',d?.preventive_maintenance_due,'manutencao',''],
+ ['Solicitações de afastamento pendentes',d?.pending_leave_requests,'rh',''],
+ ['Ocorrências de ponto em aberto',d?.open_attendance_occurrences,'rh','']
+ ].filter(x=>Number(x[1]||0)>0);
+ $('opsPending').innerHTML=pending.length?'<div class="tablewrap"><table><thead><tr><th>Pendência</th><th>Quantidade</th><th>Ação</th></tr></thead><tbody>'+pending.map(x=>'<tr><td>'+x[0]+'</td><td><b>'+fmt(x[1])+'</b></td><td><button type="button" class="secondary" data-ops-module="'+x[2]+'" data-ops-sub="'+x[3]+'">Acessar</button></td></tr>').join('')+'</tbody></table></div>':'<div class="notice green">Nenhuma pendência operacional indicada para esta unidade.</div>';
+ app.querySelectorAll('[data-ops-go],[data-ops-module]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.opsGo||b.dataset.opsModule,b.dataset.opsSub||'')));
+}
+
 async function renderAlerts(app){
  app.innerHTML='<div class="pagehead"><div><h1>Central de alertas</h1><div class="sub">Pendências operacionais da unidade selecionada. Os avisos desaparecem quando a situação é regularizada.</div></div><button id="refreshAlerts">Atualizar alertas</button></div><div id="alertSummary" class="grid"></div><div class="card section"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h3>Prioridades que exigem atenção</h3><span class="muted" id="alertUpdated"></span></div><div id="alertList">Consultando indicadores...</div></div>';
  $('refreshAlerts').addEventListener('click',()=>renderAlerts(app));
@@ -1110,7 +1153,7 @@ async function renderMaintenance(app){
  app.querySelectorAll('[data-maint-os]').forEach(b=>b.onclick=async()=>{const id=b.dataset.maintOs,next=b.dataset.next,patch={status:next};if(next==='in_progress')patch.started_at=new Date().toISOString();if(next==='completed')patch.completed_at=new Date().toISOString();if(next==='cancelled'){const why=prompt('Motivo do cancelamento');if(!why)return;patch.cancellation_reason=why}const r=await supabase.from('maintenance_work_orders').update(patch).eq('id',id).eq('company_id',companyId).eq('unit_id',unitId);if(r.error){alert(r.error.message);return}await supabase.from('maintenance_order_events').insert({company_id:companyId,unit_id:unitId,work_order_id:id,event_type:next,description:'Status alterado para '+next,performed_by:uid});render()});
  const h=$('maintHistoryAsset');if(h){h.value=window.gpMaintHistoryAsset||'';h.onchange=()=>{window.gpMaintHistoryAsset=h.value;render()}}
 }
-if(currentPage==='operacao'){app.innerHTML='<div class="pagehead"><div><h1>Operações</h1><div class="sub">Inventários, recebimentos, qualidade, RH e manutenção.</div></div></div><div class="notice">As tabelas e regras do backend estão preparadas; as telas operacionais serão conectadas módulo a módulo e testadas antes do uso real.</div>';return}
+if(currentPage==='operacao'){await renderOperations(app);return}
 if(currentPage==='ajuda'){app.innerHTML='<div class="card"><h2>GestorPro conectado ao Supabase</h2><p>Login real, sessão autenticada, empresa, unidade e leitura do dashboard estão integrados nesta primeira etapa.</p><p class="notice">Ainda não é uma versão pronta para operação: cadastros, estoque, compras, recebimento e demais processos precisam de suas telas de gravação, validação e testes.</p></div>';return}}
 supabase.auth.onAuthStateChange((_event,s)=>{if(!s){session=null;show('authView')} });
 const {data:{session:initial}}=await supabase.auth.getSession();if(initial){session=initial;await bootstrap()}else{show('authView')}
