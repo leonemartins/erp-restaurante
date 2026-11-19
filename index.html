@@ -115,6 +115,7 @@ async function renderFoodSafety(app){
  document.querySelectorAll('[data-action]').forEach(b=>b.onclick=async()=>{if(!manager)return;const id=b.dataset.action,d=$('ad'+id).value.trim();if(!d){alert('Informe a ação.');return;}const r=await supabase.from('food_safety_corrective_actions').insert({company_id:companyId,unit_id:unitId,nonconformity_id:id,action_description:d,responsible_user_id:$('au'+id).value||null,due_date:$('dt'+id).value||null,created_by:uid||null});if(r.error)alert(r.error.message);else renderFoodSafety(app);});
  document.querySelectorAll('[data-done]').forEach(b=>b.onclick=async()=>{if(!manager)return;const r=await supabase.from('food_safety_corrective_actions').update({status:'completed',completed_at:new Date().toISOString(),completion_notes:'Concluída pela gestão.'}).eq('id',b.dataset.done).eq('unit_id',unitId);if(r.error)alert(r.error.message);else renderFoodSafety(app);});
  $('tempList').innerHTML=tr.error?esc(tr.error.message):(tr.data||[]).map(x=>'<div class="rowline"><b>'+esc(x.area)+'</b> · '+esc(x.equipment||x.product_name||'—')+' · '+esc(x.measured_temperature)+' °C · '+(x.is_compliant===false?'<b class="danger">Fora do limite</b>':'Conforme')+' <small>'+new Date(x.recorded_at).toLocaleString('pt-BR')+'</small></div>').join('')||'Sem medições.';
+ await renderQualityReports(app);
 }
 async function render(){const app=$('app');app.innerHTML='<div class="notice">Carregando dados seguros da unidade...</div>';if(currentPage==='alertas'){await renderAlerts(app);return}if(currentPage==='aprovacoes'){await renderApprovals(app);return}if(currentPage==='notificacoes'){await renderNotifications(app);return}if(currentPage==='nutricao'){await renderNutrition(app);return}if(currentPage==='qualidade'){await renderFoodSafety(app);return}if(currentPage==='seguranca'){await renderSecurity(app);return}if(currentPage==='dashboard'){
  const {data,error}=await supabase.from('v_management_unit_dashboard').select('*').eq('unit_id',unitId).maybeSingle();
@@ -809,6 +810,58 @@ async function renderReports(app){
  $('exportReportXlsx').onclick=async()=>{if(!reportRows.length){msg('reportStatus','Gere um relatório com registros antes de exportar.',true);return}try{await loadReportLibrary('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');const ws=XLSX.utils.json_to_sheet(reportRows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Auditoria');XLSX.writeFile(wb,'GestorPro_Auditoria_'+today+'.xlsx');msg('reportStatus','Arquivo Excel gerado.')}catch(e){msg('reportStatus',e.message,true)}};
  $('exportReportPdf').onclick=async()=>{if(!reportRows.length){msg('reportStatus','Gere um relatório com registros antes de exportar.',true);return}try{await loadReportLibrary('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');await loadReportLibrary('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js');const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});doc.setFontSize(16);doc.text('GestorPro - '+reportTitle,14,15);doc.setFontSize(9);doc.text('Período: '+$('reportFrom').value+' a '+$('reportTo').value+' | Unidade: '+($('unitSelect').selectedOptions[0]?.textContent||''),14,22);doc.autoTable({startY:27,head:[['Categoria','Data','Registro','Detalhes','Valor','Responsável','Auditoria']],body:reportRows.map(x=>[x.Categoria,x.Data,x.Registro,x.Detalhes,money(x.Valor),x.Responsável,x.Auditoria]),styles:{fontSize:7,cellPadding:2,overflow:'linebreak'},columnStyles:{3:{cellWidth:55},6:{cellWidth:55}},didDrawPage:()=>{doc.setFontSize(8);doc.text('Relatório gerado em '+new Date().toLocaleString('pt-BR'),14,doc.internal.pageSize.height-7)}});doc.save('GestorPro_Auditoria_'+today+'.pdf');msg('reportStatus','Arquivo PDF gerado.')}catch(e){msg('reportStatus',e.message,true)}};
  await load();
+}
+
+async function renderQualityReports(app){
+ const defaultTo=new Date(),defaultFrom=new Date(defaultTo.getFullYear(),defaultTo.getMonth(),1);
+ const isoDate=d=>{const x=new Date(d.getTime()-d.getTimezoneOffset()*60000);return x.toISOString().slice(0,10)};
+ const unitsForReport=units.slice();
+ app.insertAdjacentHTML('beforeend','<div class="card section"><h3>Relatórios de qualidade e segurança alimentar</h3><p class="muted">Exporte temperaturas, não conformidades, checklists e ações corretivas. Os filtros respeitam as unidades às quais sua conta tem acesso.</p><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"><div class="field"><label>Data inicial</label><input type="date" id="qReportFrom" value="'+isoDate(defaultFrom)+'"></div><div class="field"><label>Data final</label><input type="date" id="qReportTo" value="'+isoDate(defaultTo)+'"></div><div class="field"><label>Unidade</label><select id="qReportUnit"><option value="">Todas as unidades acessíveis</option>'+unitsForReport.map(u=>'<option value="'+safe(u.id)+'">'+safe(u.name)+'</option>').join('')+'</select></div><div class="field"><label>Responsável</label><select id="qReportPerson"><option value="">Todos os responsáveis</option></select></div></div><div class="toolbar" style="display:flex;gap:8px;flex-wrap:wrap"><button id="qReportRun">Gerar relatório</button><button class="secondary" id="qReportExcel">Exportar Excel</button><button class="secondary" id="qReportPdf">Exportar PDF</button></div><div id="qReportStatus" class="status"></div><div id="qReportSummary" class="grid section" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))"></div><div id="qReportTable"></div></div>');
+ let rows=[];
+ const say=(message,error=false)=>{const el=$('qReportStatus');el.textContent=message;el.className='status '+(error?'red':'green')};
+ const run=async()=>{
+  const from=$('qReportFrom').value,to=$('qReportTo').value,unit=$('qReportUnit').value;
+  if(!from||!to||from>to){say('Informe um período válido.',true);return}
+  const unitIds=unit?[unit]:unitsForReport.map(u=>u.id);
+  if(!unitIds.length){say('Nenhuma unidade acessível para consulta.',true);return}
+  $('qReportTable').innerHTML='<div class="notice">Consultando registros de qualidade...</div>';
+  const start=from+'T00:00:00',end=new Date(to+'T23:59:59.999').toISOString();
+  const fetchRows=(table,dateCol,cols)=>supabase.from(table).select(cols).eq('company_id',companyId).in('unit_id',unitIds).gte(dateCol,start).lte(dateCol,end).order(dateCol,{ascending:false}).limit(5000);
+  const [temps,issues,actions,runs]=await Promise.all([
+   fetchRows('temperature_logs','recorded_at','id,unit_id,area,equipment,product_name,measured_temperature,minimum_temperature,maximum_temperature,is_compliant,corrective_action,operator_id,recorded_at'),
+   fetchRows('food_safety_nonconformities','detected_at','id,unit_id,source_type,severity,title,description,status,detected_by,detected_at,due_date'),
+   fetchRows('food_safety_corrective_actions','created_at','id,unit_id,nonconformity_id,action_description,responsible_user_id,created_by,status,due_date,completed_at,created_at'),
+   fetchRows('quality_checklist_runs','started_at','id,unit_id,checklist_id,status,started_at,completed_at,completed_by,notes')
+  ]);
+  const failed=[temps,issues,actions,runs].find(x=>x.error);
+  if(failed){$('qReportTable').innerHTML='<div class="notice">Erro ao consultar relatório: '+safe(failed.error.message)+'</div>';say('Não foi possível gerar o relatório. Verifique as permissões de acesso.',true);return}
+  const unitName=id=>unitsForReport.find(u=>u.id===id)?.name||'Unidade';
+  const records=[];
+  (temps.data||[]).forEach(x=>records.push({tipo:'Temperatura',data:x.recorded_at,unit_id:x.unit_id,responsavel:x.operator_id,registro:x.equipment||x.product_name||x.area,detalhes:'Medição '+x.measured_temperature+' °C; limite '+(x.minimum_temperature??'—')+' a '+(x.maximum_temperature??'—')+' °C; '+(x.is_compliant?'Conforme':'Fora do padrão')+(x.corrective_action?' · Ação: '+x.corrective_action:'')}));
+  (issues.data||[]).forEach(x=>records.push({tipo:'Não conformidade',data:x.detected_at,unit_id:x.unit_id,responsavel:x.detected_by,registro:x.title,detalhes:'Origem: '+x.source_type+'; gravidade: '+x.severity+'; status: '+x.status+'; prazo: '+(x.due_date||'—')+'; '+(x.description||'')}));
+  (actions.data||[]).forEach(x=>records.push({tipo:'Ação corretiva',data:x.created_at,unit_id:x.unit_id,responsavel:x.responsible_user_id||x.created_by,registro:x.action_description,detalhes:'Status: '+x.status+'; prazo: '+(x.due_date||'—')+'; conclusão: '+(x.completed_at||'—')}));
+  (runs.data||[]).forEach(x=>records.push({tipo:'Checklist',data:x.started_at,unit_id:x.unit_id,responsavel:x.completed_by,registro:'Checklist '+String(x.checklist_id).slice(0,8),detalhes:'Status: '+x.status+'; concluído em: '+(x.completed_at||'—')+'; '+(x.notes||'')}));
+  const personIds=[...new Set(records.map(x=>x.responsavel).filter(Boolean))];
+  const profiles=personIds.length?await supabase.from('user_profiles').select('id,full_name,email').in('id',personIds):{data:[],error:null};
+  const people=new Map((profiles.data||[]).map(x=>[x.id,x.full_name||x.email||'Usuário']));
+  const names=new Map(records.map(x=>[x.responsavel,people.get(x.responsavel)||'Usuário não identificado']));
+  const select=$('qReportPerson'),prior=select.value;
+  select.innerHTML='<option value="">Todos os responsáveis</option>'+[...new Set([...names.values()])].sort().map(n=>'<option value="'+safe(n)+'">'+safe(n)+'</option>').join('');
+  if([...select.options].some(o=>o.value===prior))select.value=prior;
+  const selected=select.value;
+  rows=records.filter(x=>!selected||(names.get(x.responsavel)||'Usuário não identificado')===selected).map(x=>({Tipo:x.tipo,Data:new Date(x.data).toLocaleString('pt-BR'),Unidade:unitName(x.unit_id),Responsável:names.get(x.responsavel)||'—',Registro:x.registro||'—',Detalhes:x.detalhes}));
+  rows.sort((a,b)=>{const parse=x=>{const p=x.split(', '),d=p[0].split('/').reverse().join('-');return new Date(d+'T'+(p[1]||'00:00:00'))};return parse(b.Data)-parse(a.Data)});
+  const compliant=(temps.data||[]).filter(x=>x.is_compliant).length,totalTemps=(temps.data||[]).length;
+  const cards=[['Registros',rows.length],['Temperaturas',totalTemps],['Fora do padrão',(temps.data||[]).filter(x=>!x.is_compliant).length],['Não conformidades',(issues.data||[]).length],['Checklists',(runs.data||[]).length],['Ações corretivas',(actions.data||[]).length]];
+  $('qReportSummary').innerHTML=cards.map(x=>'<div class="card"><small class="muted">'+x[0]+'</small><h3>'+x[1]+'</h3></div>').join('');
+  $('qReportTable').innerHTML=table(['Tipo','Data','Unidade','Responsável','Registro','Detalhes'],rows.map(x=>'<tr>'+[x.Tipo,x.Data,x.Unidade,x.Responsável,x.Registro,x.Detalhes].map(v=>'<td>'+safe(v)+'</td>').join('')+'</tr>').join(''));
+  say(rows.length+' registro(s) encontrados. Limite de 5.000 por categoria.');
+ };
+ $('qReportRun').onclick=run;
+ $('qReportPerson').onchange=()=>{if(rows.length)run()};
+ $('qReportExcel').onclick=async()=>{if(!rows.length){say('Gere um relatório antes de exportar.',true);return}try{await loadReportLibrary('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(rows);XLSX.utils.book_append_sheet(wb,ws,'Qualidade');XLSX.writeFile(wb,'GestorPro_Qualidade_'+$('qReportFrom').value+'_a_'+$('qReportTo').value+'.xlsx');say('Arquivo Excel gerado.')}catch(e){say(e.message,true)}};
+ $('qReportPdf').onclick=async()=>{if(!rows.length){say('Gere um relatório antes de exportar.',true);return}try{await loadReportLibrary('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');await loadReportLibrary('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js');const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});doc.setFontSize(16);doc.text('GestorPro - Relatório de Qualidade',14,15);doc.setFontSize(9);doc.text('Período: '+$('qReportFrom').value+' a '+$('qReportTo').value+' | Unidade: '+($('qReportUnit').selectedOptions[0]?.textContent||'Todas')+' | Responsável: '+($('qReportPerson').selectedOptions[0]?.textContent||'Todos'),14,22);doc.autoTable({startY:27,head:[['Tipo','Data','Unidade','Responsável','Registro','Detalhes']],body:rows.map(x=>[x.Tipo,x.Data,x.Unidade,x.Responsável,x.Registro,x.Detalhes]),styles:{fontSize:7,cellPadding:2,overflow:'linebreak'},columnStyles:{5:{cellWidth:75}}});doc.save('GestorPro_Qualidade_'+$('qReportFrom').value+'_a_'+$('qReportTo').value+'.pdf');say('Arquivo PDF gerado.')}catch(e){say(e.message,true)}};
+ await run();
 }
 
 async function renderHR(app){
