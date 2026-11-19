@@ -191,7 +191,8 @@ const [positionsRes,structuresRes]=await Promise.all([
  supabase.from('company_structures').select('id,name,parent_id,active').eq('company_id',companyId).eq('active',true).order('name')
 ]);
 if(positionsRes.error||structuresRes.error){app.innerHTML='<div class="notice red">Erro ao carregar listas auxiliares: '+safe((positionsRes.error||structuresRes.error).message)+'</div>';return}
-const positions=positionsRes.data||[],structures=structuresRes.data||[];
+const standardJobTitles=['Auxiliar de Cozinha','Meio Oficial Cozinha','Cozinheiro','Chefe de Cozinha','Atendente','Operador (a) de Caixa','Copeiro (a)','Coordenador (a)','Gerente','Auxiliar Administrativo','Estoquista'];
+const positions=(positionsRes.data||[]).filter(p=>standardJobTitles.includes(p.title)),structures=structuresRes.data||[];
 let rows=[],users=[],accessRows=[],error=null;
 if(tab==='users'){
  const {data:m,error:me}=await supabase.from('company_memberships').select('id,user_id,role,created_at').eq('company_id',companyId).order('created_at');
