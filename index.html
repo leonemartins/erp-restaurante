@@ -695,7 +695,7 @@ async function renderGoodsReceipts(app){
  }
 }
 
-if(currentPage==='compras'){await renderPurchases(app);return}
+if(currentPage==='compras'){try{await renderPurchases(app)}catch(err){console.error('GestorPro Compras:',err);app.innerHTML='<div class="notice red"><b>Não foi possível abrir Compras.</b><br>'+safe(err?.message||String(err))+'<br><button type="button" class="secondary" id="retryPurchases">Tentar novamente</button></div>';const retry=$('retryPurchases');if(retry)retry.onclick=()=>render()}return}
 if(currentPage==='recebimentos'){await renderGoodsReceipts(app);return}
  if(currentPage==='custos'){await renderCosts(app);return}
 if(currentPage==='relatorios'){await renderReports(app);return}
