@@ -979,7 +979,7 @@ async function renderMaintenance(app){
  supabase.from('suppliers').select('id,name,contact_name,email,phone').eq('company_id',companyId).eq('active',true).order('name'),
  supabase.from('maintenance_parts_used').select('*,suppliers(name)').eq('company_id',companyId).eq('unit_id',unitId).order('created_at',{ascending:false}),
  supabase.from('maintenance_order_events').select('*').eq('company_id',companyId).eq('unit_id',unitId).order('occurred_at',{ascending:false}),
- supabase.from('stock_balances').select('product_id,quantity,average_cost,products(name,unit_measure)').eq('company_id',companyId).eq('unit_id',unitId).order('products(name)')
+ supabase.from('stock_balances').select('product_id,quantity,average_cost,products(name,unit_measure)').eq('company_id',companyId).eq('unit_id',unitId)
  ]);
  const err=[a,o,p,parts,events].find(x=>x.error);if(err){app.innerHTML='<div class="notice red">'+safe(err.error.message)+'</div>';return}
  const A=a.data||[],O=o.data||[],P=p.data||[],S=sup.data||[],PT=parts.data||[],EV=events.data||[],D=d.data||{},BAL=stockBalances.data||[];
