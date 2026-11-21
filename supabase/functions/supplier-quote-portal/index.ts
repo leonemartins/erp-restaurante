@@ -67,7 +67,7 @@ Deno.serve(async(req)=>{
   const token=String(body.token||"");
   if(!/^[a-f0-9]{64}$/.test(token)) return json({error:"Link inválido."},400);
   const hash=await sha(token);
-  const {data:link,error:linkErr}=await admin.from("supplier_quote_links").select("id,quote_id,supplier_id,expires_at,submitted_at,suppliers(name),purchase_quotes(id,title,status,opened_at,deadline)").eq("token_hash",hash).maybeSingle();
+  const {data:link,error:linkErr}=await admin.from("supplier_quote_links").select("id,quote_id,supplier_id,expires_at,submitted_at,suppliers(name),purchase_quotes(id,title,status,opened_at,deadline)").or("token_hash.eq."+hash+",whatsapp_token_hash.eq."+hash).maybeSingle();
   if(linkErr||!link) return json({error:"Link inválido ou não encontrado."},404);
   const quote=link.purchase_quotes;
   if(!quote) return json({error:"Cotação não encontrada."},404);
