@@ -9,6 +9,141 @@
 rap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:collapse;min-width:600px}th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line)}th{font-size:11px;text-transform:uppercase;color:var(--muted);background:#f9fbfd}.empty{padding:28px;text-align:center;color:var(--muted)}.authwrap{min-height:100vh;display:grid;place-items:center;padding:18px}.authcard{width:min(440px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px;box-shadow:0 12px 40px #15283c12}.authbrand{font-size:24px;font-weight:850;color:var(--navy)}.authbrand small{display:block;font-size:10px;letter-spacing:2px;color:var(--muted)}.field{margin:14px 0}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}.authactions{display:flex;gap:8px;flex-wrap:wrap}.authactions button{flex:1}.hidden{display:none!important}.toolbar button{padding:9px 12px;font-size:12px}.field{min-width:0}.card h3{margin-top:0}.tablewrap select{min-width:125px;padding:8px}.status{margin-top:12px;font-size:13px;line-height:1.5}.topright{display:flex;align-items:center;gap:12px}.topright select{width:auto;max-width:230px}.topright span{color:var(--muted);font-size:12px}
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.content{padding:18px}}
 @media(max-width:620px){.grid{grid-template-columns:1fr!important}.shell{display:block}.sidebar{width:100%;padding:12px}.brand{padding:4px 8px 12px}.nav{display:flex;overflow:auto;gap:5px}.navlabel{display:none}.nav button{white-space:nowrap;width:auto;font-size:12px;padding:8px}.top{padding:0 12px}.content{padding:15px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pagehead{display:block}.topright span{display:none}}
+
+/* GestorPro Corporate Premium — camada visual global */
+:root{
+ --navy:#101d35;--navy2:#1b2d49;--blue:#263f61;--gold:#d4af37;--gold-soft:#f7f0d9;
+ --bg:#f4f6f9;--card:#ffffff;--surface:#ffffff;--text:#202b3b;--muted:#748094;
+ --line:#e4e9f0;--green:#16865b;--red:#c74747;--amber:#a87518;
+ --shadow:0 8px 24px rgba(16,29,53,.055);--radius:14px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;letter-spacing:.005em}
+button{background:var(--navy);border-radius:9px;transition:background .18s ease,border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+button:not(:disabled):hover{background:#1b3150;box-shadow:0 4px 12px rgba(16,29,53,.12)}
+button:disabled{opacity:.55;cursor:not-allowed}
+button.secondary{background:#f1f3f6;color:#344258;border:1px solid #e4e8ef}
+button.secondary:hover{background:#e8edf3;color:var(--navy)}
+input,select,textarea{border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--text);outline:none;transition:border-color .18s ease,box-shadow .18s ease}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,175,55,.15)}
+.shell{min-height:100vh}
+.sidebar{width:264px;background:var(--navy);color:#dbe3ef;padding:20px 13px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;transition:width .22s ease,padding .22s ease;scrollbar-width:thin;scrollbar-color:#344762 transparent}
+.brand{display:flex;align-items:center;gap:11px;font-size:17px;font-weight:800;letter-spacing:.09em;color:#fff;padding:5px 10px 22px;white-space:nowrap}
+.brand-mark{width:34px;height:34px;display:grid;place-items:center;border:1px solid rgba(212,175,55,.65);border-radius:10px;color:var(--gold);font-size:19px;font-weight:800;letter-spacing:0}
+.brand small{display:block;color:#9cacc1;font-size:9px;letter-spacing:1.7px;margin-top:4px;font-weight:600}
+.nav{display:flex;flex-direction:column;gap:3px;min-width:0}
+.navlabel{font-size:9px;color:#8294ad;text-transform:uppercase;letter-spacing:1.55px;padding:15px 11px 6px;font-weight:750}
+.nav button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:transparent;color:#c4cfdd;padding:10px 11px;margin:0;border-radius:8px;font-size:12px;font-weight:550;white-space:nowrap;box-shadow:none}
+.nav button:hover{background:rgba(255,255,255,.075);color:#fff;box-shadow:none}
+.nav button.active,.nav button.active:hover{background:linear-gradient(90deg,rgba(212,175,55,.19),rgba(212,175,55,.07));color:#fff;box-shadow:inset 3px 0 0 var(--gold)}
+.navicon{width:19px;min-width:19px;text-align:center;color:#d4af37;font-size:15px}
+.sidebar-foot{margin-top:auto;padding:18px 10px 5px;color:#91a1b6;font-size:10px;letter-spacing:.02em;white-space:nowrap}
+.sidebar-foot-dot{display:inline-block;width:7px;height:7px;background:#4db68a;border-radius:50%;margin-right:7px;box-shadow:0 0 0 3px rgba(77,182,138,.12)}
+.main{min-width:0;background:var(--bg)}
+.top{height:76px;position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:0 28px;gap:18px}
+.top-left{display:flex;align-items:center;gap:14px;min-width:0}
+.top-heading{display:flex;flex-direction:column;gap:2px;min-width:0}
+.top-heading strong{font-size:15px;font-weight:750;color:var(--navy)}
+.top-eyebrow{font-size:9px;letter-spacing:1.6px;color:#9a8250;font-weight:750}
+.topright{gap:10px}
+.topright select{min-width:155px;max-width:230px;padding:9px 34px 9px 12px;font-size:12px;font-weight:600}
+.topright span#userLabel{font-size:11px;font-weight:600;color:#66748a}
+.icon-button,.theme-toggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#fff;color:#33435a;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:12px;font-weight:650}
+.icon-button:hover,.theme-toggle:hover{background:#f8f6ef;color:var(--navy);border-color:#e8d9a7;box-shadow:none}
+.sidebar-toggle{width:36px;height:36px;padding:0;font-size:17px}
+.theme-symbol{color:#a1842c;font-size:16px}
+.logout-button{padding:9px 13px}
+.content{padding:28px 30px 42px;max-width:1580px}
+.pagehead{align-items:center;margin-bottom:22px}
+.pagehead h1{font-size:25px;letter-spacing:-.035em;font-weight:780;color:var(--navy)}
+.sub,.muted{color:var(--muted);line-height:1.55}
+.grid{gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:19px;box-shadow:var(--shadow)}
+.card h3{font-size:15px;font-weight:750;color:var(--navy);letter-spacing:-.015em}
+.kpi b{font-size:27px;letter-spacing:-.04em;color:var(--navy)}
+.section{margin-top:20px}
+.notice{border-radius:10px}
+.pill{font-weight:650;letter-spacing:.01em}
+.tablewrap,.tablewrap table,.tablewrap th,.tablewrap td{border-color:var(--line)}
+.tablewrap{border-radius:12px;box-shadow:var(--shadow)}
+table{min-width:620px}
+th{background:#f7f8fa;color:#7b8798;font-size:10px;font-weight:750;letter-spacing:.08em}
+td{font-size:12px;color:#344258}
+tbody tr:hover{background:#fbfaf6}
+.toolbar{gap:8px!important}
+.toolbar button{border-radius:8px}
+.authwrap{background:radial-gradient(circle at 15% 10%,rgba(212,175,55,.10),transparent 28%),var(--bg)}
+.authcard{border:1px solid #e8ebf0;border-radius:18px;box-shadow:0 18px 55px rgba(16,29,53,.09);padding:30px}
+.authbrand{color:var(--navy);letter-spacing:.06em}
+.authbrand small{letter-spacing:2.2px;color:#9a8250}
+.field label{font-weight:650;letter-spacing:.015em}
+.status{line-height:1.55}
+.hidden{display:none!important}
+.shell.sidebar-collapsed .sidebar{width:76px;padding-left:9px;padding-right:9px}
+.shell.sidebar-collapsed .brand{justify-content:center;padding-left:0;padding-right:0}
+.shell.sidebar-collapsed .brand>span:last-child,.shell.sidebar-collapsed .navlabel,.shell.sidebar-collapsed .nav button:not(.active),.shell.sidebar-collapsed .nav button.active{font-size:0}
+.shell.sidebar-collapsed .nav button{justify-content:center;padding:12px 5px;font-size:0}
+.shell.sidebar-collapsed .navicon{font-size:16px}
+.shell.sidebar-collapsed .sidebar-foot{font-size:0;text-align:center;padding-left:0;padding-right:0}
+.shell.sidebar-collapsed .sidebar-foot-dot{margin:0}
+@media(max-width:900px){
+ .sidebar{width:230px}.content{padding:20px}
+ .top{padding:0 18px}
+ .topright span#userLabel{display:none}
+}
+@media(max-width:620px){
+ .shell{display:block}
+ .sidebar{position:relative;top:auto;width:100%;height:auto;max-height:none;padding:10px 10px 7px;overflow:visible}
+ .brand{padding:3px 7px 10px;font-size:15px}
+ .brand-mark{width:30px;height:30px}
+ .nav{display:flex;flex-direction:row;overflow-x:auto;gap:5px;padding-bottom:4px;scrollbar-width:thin}
+ .navlabel{display:none}
+ .nav button{width:auto;flex:0 0 auto;font-size:11px;padding:8px 10px}
+ .navicon{width:auto;min-width:0}
+ .sidebar-foot{display:none}
+ .top{height:auto;min-height:66px;padding:10px 12px;align-items:center}
+ .top-left{gap:8px}
+ .top-heading strong{font-size:13px}
+ .top-eyebrow{font-size:8px}
+ .topright{gap:6px}
+ .topright select{max-width:125px;min-width:100px;font-size:11px;padding:8px}
+ .theme-toggle{padding:8px;font-size:0;width:36px;height:36px}
+ .theme-symbol{font-size:16px}
+ .logout-button{padding:8px 9px;font-size:11px}
+ .content{padding:15px 12px 28px}
+ .pagehead h1{font-size:22px}
+ .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .card{padding:14px}
+ .kpi b{font-size:22px}
+ .shell.sidebar-collapsed .sidebar{width:100%;padding:10px 10px 7px}
+ .shell.sidebar-collapsed .brand>span:last-child{display:inline}
+ .shell.sidebar-collapsed .nav button{font-size:11px;justify-content:flex-start}
+ .shell.sidebar-collapsed .nav button .navicon{font-size:14px}
+}
+body[data-theme="dark"]{
+ --bg:#0b1220;--card:#111d2e;--surface:#111d2e;--text:#e5ebf4;--muted:#9aa9bd;--line:#26364b;
+ --navy:#0a1424;--navy2:#1a2a42;--shadow:0 8px 24px rgba(0,0,0,.22);
+ color:var(--text);background:var(--bg);color-scheme:dark
+}
+body[data-theme="dark"] .main{background:var(--bg)}
+body[data-theme="dark"] .top{background:rgba(17,29,46,.94);border-color:var(--line)}
+body[data-theme="dark"] .top-heading strong,body[data-theme="dark"] .pagehead h1,body[data-theme="dark"] .card h3,body[data-theme="dark"] .kpi b{color:#edf2fa}
+body[data-theme="dark"] .card,body[data-theme="dark"] .tablewrap,body[data-theme="dark"] .authcard{background:var(--card);border-color:var(--line);color:var(--text)}
+body[data-theme="dark"] input,body[data-theme="dark"] select,body[data-theme="dark"] textarea{background:#0d1828;border-color:var(--line);color:var(--text)}
+body[data-theme="dark"] button.secondary,body[data-theme="dark"] .icon-button,body[data-theme="dark"] .theme-toggle{background:#1b2b41;color:#e0e8f3;border-color:#30435d}
+body[data-theme="dark"] th{background:#17263a;color:#aab8ca}
+body[data-theme="dark"] td{color:#d3dce8;border-color:var(--line)}
+body[data-theme="dark"] tbody tr:hover{background:#18283d}
+body[data-theme="dark"] .notice{background:#172b43;border-color:#294766;color:#d3e5f8}
+body[data-theme="dark"] .pill{background:#20334b;color:#d5e3f5}
+body[data-theme="dark"] .authwrap{background:radial-gradient(circle at 15% 10%,rgba(212,175,55,.08),transparent 28%),var(--bg)}
+body[data-theme="dark"] .authbrand{color:#f1f4f8}
+body[data-theme="dark"] .authbrand small,body[data-theme="dark"] .top-eyebrow{color:#d4af37}
+body[data-theme="dark"] .topright span#userLabel{color:#aab8ca}
+body[data-theme="dark"] .green{color:#62c99a}
+body[data-theme="dark"] .red{color:#ff8888}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
 </style>
 </head>
 <body>
@@ -20,8 +155,37 @@ rap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12p
  </div></div>
 <div id="setupView" class="authwrap hidden"><div class="authcard"><div class="authbrand">GESTORPRO<small>CONFIGURAÇÃO INICIAL</small></div><h2>Cadastre sua empresa</h2><p class="muted">Este será o ambiente administrativo inicial da sua organização.</p><form id="setupForm"><div class="field"><label>Nome da empresa</label><input id="companyName" required maxlength="120" placeholder="Ex.: Minha Rede de Restaurantes"></div><div class="field"><label>Nome da primeira unidade</label><input id="unitName" required maxlength="120" placeholder="Ex.: Unidade Matriz"></div><button type="submit">Criar empresa e unidade</button></form><div id="setupStatus" class="status" role="status"></div><button class="secondary" id="setupLogout" type="button">Sair</button></div></div>
 <div id="appView" class="shell hidden">
- <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="custos">💰 &nbsp; CMV e Custos</button><button data-page="nutricao">🥗 &nbsp; Nutrição</button><button data-page="qualidade">🛡 &nbsp; Qualidade e segurança</button><button data-page="manutencao">🔧 &nbsp; Manutenção e patrimônio</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="relatorios">📊 &nbsp; Relatórios e auditoria</button><button data-page="alertas">🔔 &nbsp; Central de alertas</button><button data-page="aprovacoes">✓ &nbsp; Centro de aprovações</button><button data-page="notificacoes">✉ &nbsp; Notificações</button><button data-page="seguranca">🔐 &nbsp; Segurança e acessos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
- <main class="main"><header class="top"><strong id="topTitle">Dashboard gerencial</strong><div class="topright"><select id="unitSelect" aria-label="Selecionar unidade"></select><span id="userLabel"></span><button class="secondary" id="logoutBtn">Sair</button></div></header><div class="content" id="app"></div></main>
+ <aside class="sidebar" id="appSidebar">
+  <div class="brand"><span class="brand-mark">G</span><span>GESTORPRO<small>ERP RESTAURANTE</small></span></div>
+  <nav class="nav" id="nav">
+   <div class="navlabel">Visão geral</div>
+   <button class="active" data-page="dashboard"><span class="navicon">▦</span>Dashboard</button>
+   <div class="navlabel">Cadastros e estrutura</div>
+   <button data-page="cadastros"><span class="navicon">♙</span>Cadastros</button>
+   <button data-page="rh"><span class="navicon">♙</span>Recursos Humanos</button>
+   <div class="navlabel">Suprimentos e estoque</div>
+   <button data-page="compras"><span class="navicon">🛒</span>Compras e cotações</button>
+   <button data-page="recebimentos"><span class="navicon">▣</span>Recebimentos</button>
+   <button data-page="estoque"><span class="navicon">▤</span>Estoque e inventário</button>
+   <div class="navlabel">Custos e produção</div>
+   <button data-page="custos"><span class="navicon">◈</span>CMV e custos</button>
+   <button data-page="nutricao"><span class="navicon">♨</span>Nutrição e fichas</button>
+   <button data-page="operacao"><span class="navicon">☑</span>Operações</button>
+   <div class="navlabel">Qualidade e patrimônio</div>
+   <button data-page="qualidade"><span class="navicon">◇</span>Qualidade e segurança</button>
+   <button data-page="manutencao"><span class="navicon">⚙</span>Manutenção e patrimônio</button>
+   <div class="navlabel">Controle e inteligência</div>
+   <button data-page="aprovacoes"><span class="navicon">✓</span>Centro de aprovações</button>
+   <button data-page="alertas"><span class="navicon">♧</span>Central de alertas</button>
+   <button data-page="notificacoes"><span class="navicon">✉</span>Notificações</button>
+   <button data-page="relatorios"><span class="navicon">▥</span>Relatórios e auditoria</button>
+   <div class="navlabel">Administração</div>
+   <button data-page="seguranca"><span class="navicon">▣</span>Segurança e acessos</button>
+   <button data-page="ajuda"><span class="navicon">ⓘ</span>Sobre o sistema</button>
+  </nav>
+  <div class="sidebar-foot"><span class="sidebar-foot-dot"></span> Ambiente seguro · GestorPro</div>
+ </aside>
+ <main class="main"><header class="top"><div class="top-left"><button type="button" class="icon-button sidebar-toggle" id="sidebarToggle" aria-label="Recolher menu" title="Recolher menu">☰</button><div class="top-heading"><span class="top-eyebrow">GESTÃO RESTAURANTE</span><strong id="topTitle">Dashboard gerencial</strong></div></div><div class="topright"><select id="unitSelect" aria-label="Selecionar unidade"></select><button type="button" class="theme-toggle" id="themeToggle" aria-label="Alternar tema"><span class="theme-symbol">◐</span><span class="theme-label">Modo escuro</span></button><span id="userLabel"></span><button class="secondary logout-button" id="logoutBtn">Sair</button></div></header><div class="content" id="app"></div></main>
 </div>
 <script>
 window.__gestorProModuleLoaded=false;
@@ -1240,5 +1404,23 @@ const {data:{session:initial}}=await supabase.auth.getSession();if(initial){sess
   if(statusEl){statusEl.textContent='Falha ao iniciar o GestorPro: '+(bootError&&bootError.message?bootError.message:String(bootError));statusEl.className='status red';}
   window.__gestorProModuleLoaded=true;
 });
+</script>
+
+<script>
+(function gestorProAppearance(){
+ const root=document.body,app=document.getElementById('appView');
+ const themeButton=document.getElementById('themeToggle');
+ const sidebarButton=document.getElementById('sidebarToggle');
+ let theme='light';
+ try{theme=localStorage.getItem('gestorpro-theme')||'light'}catch(e){}
+ const applyTheme=value=>{
+  theme=value==='dark'?'dark':'light';root.setAttribute('data-theme',theme);
+  if(themeButton){themeButton.setAttribute('aria-pressed',String(theme==='dark'));themeButton.querySelector('.theme-label').textContent=theme==='dark'?'Modo claro':'Modo escuro';themeButton.querySelector('.theme-symbol').textContent=theme==='dark'?'☀':'◐'}
+  try{localStorage.setItem('gestorpro-theme',theme)}catch(e){}
+ };
+ applyTheme(theme);
+ themeButton?.addEventListener('click',()=>applyTheme(theme==='dark'?'light':'dark'));
+ sidebarButton?.addEventListener('click',()=>{if(!app)return;app.classList.toggle('sidebar-collapsed');const collapsed=app.classList.contains('sidebar-collapsed');sidebarButton.setAttribute('aria-expanded',String(!collapsed));sidebarButton.title=collapsed?'Expandir menu':'Recolher menu'});
+})();
 </script>
 </body></html>
