@@ -28,8 +28,7 @@ create table if not exists public.supplier_quote_whatsapp_messages (
 );
 
 create unique index if not exists supplier_quote_whatsapp_messages_provider_id_uidx
-  on public.supplier_quote_whatsapp_messages(provider_message_id)
-  where provider_message_id is not null;
+  on public.supplier_quote_whatsapp_messages(provider_message_id);
 
 create index if not exists supplier_quote_whatsapp_messages_quote_created_idx
   on public.supplier_quote_whatsapp_messages(quote_id, created_at desc);
