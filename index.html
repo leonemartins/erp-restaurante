@@ -24,7 +24,7 @@ rap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12p
  <main class="content"><div class="pagehead"><div><h1>Central do Proprietário</h1><div class="sub">Administração central da plataforma GestorPro, independente das empresas clientes.</div></div><span class="pill">Acesso proprietário</span></div>
  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))"><div class="card kpi"><small>Empresas cadastradas</small><b id="platformCompaniesCount">—</b></div><div class="card kpi"><small>Contas da equipe GestorPro</small><b id="platformStaffCount">—</b></div><div class="card kpi"><small>Perfil conectado</small><b id="platformRoleLabel" style="font-size:18px">Proprietário</b></div></div>
  <div class="card section"><h3>Controle da plataforma</h3><p class="muted">Sua conta proprietária é separada dos acessos dos restaurantes. Somente ela pode convidar, alterar permissões e suspender administradores.</p><div class="notice">Administradores delegados não podem alterar, suspender ou substituir a conta proprietária.</div></div>
- <div id="platformStaffPanel"></div><div id="platformStatus" class="status"></div></main>
+ <div id="platformCompaniesPanel"></div><div id="platformStaffPanel"></div><div id="platformStatus" class="status"></div></main>
 </div>
 <div id="appView" class="shell hidden">
  <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="custos">💰 &nbsp; CMV e Custos</button><button data-page="faturamento">💵 &nbsp; Faturamento e Ticket Médio</button><button data-page="nutricao">🥗 &nbsp; Nutrição</button><button data-page="qualidade">🛡 &nbsp; Qualidade e segurança</button><button data-page="manutencao">🔧 &nbsp; Manutenção e patrimônio</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="relatorios">📊 &nbsp; Relatórios e auditoria</button><button data-page="alertas">🔔 &nbsp; Central de alertas</button><button data-page="aprovacoes">✓ &nbsp; Centro de aprovações</button><button data-page="notificacoes">✉ &nbsp; Notificações</button><button data-page="seguranca">🔐 &nbsp; Segurança e acessos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
@@ -177,6 +177,23 @@ async function callPlatformAction(payload){
  if(!response.ok||data?.error)throw new Error(data?.error||('HTTP '+response.status));
  return data;
 }
+async function renderPlatformCompanies(){
+ const root=$('platformCompaniesPanel');if(!root)return;
+ root.innerHTML='<div class="card section"><h3>Empresas clientes</h3><p class="muted">Carregando empresas cadastradas...</p></div>';
+ try{
+  const data=await callPlatformAction({action:'list_companies'});
+  const rows=data.companies||[];
+  const cards=rows.map((co,i)=>'<div class="card section" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><b>'+safe(co.name)+'</b><div class="muted">'+safe(co.owner_email||'Responsável não identificado')+' · '+Number(co.members_count||0)+' usuário(s)</div><small class="muted">Cadastro: '+(co.created_at?new Date(co.created_at).toLocaleDateString('pt-BR'):'—')+'</small></div><span class="pill">'+(co.status==='active'?'Ativa':'Suspensa')+'</span></div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-top:12px"><div class="field"><label>Status</label><select data-company-status="'+safe(co.id)+'"><option value="active" '+(co.status==='active'?'selected':'')+'>Ativa</option><option value="suspended" '+(co.status==='suspended'?'selected':'')+'>Suspensa</option></select></div><div class="field"><label>Plano</label><select data-company-plan="'+safe(co.id)+'"><option value="trial" '+(co.plan==='trial'?'selected':'')+'>Avaliação</option><option value="basic" '+(co.plan==='basic'?'selected':'')+'>Básico</option><option value="professional" '+(co.plan==='professional'?'selected':'')+'>Profissional</option><option value="enterprise" '+(co.plan==='enterprise'?'selected':'')+'>Enterprise</option></select></div><div class="field"><label>Financeiro</label><select data-company-billing="'+safe(co.id)+'"><option value="trial" '+(co.billing_status==='trial'?'selected':'')+'>Em avaliação</option><option value="current" '+(co.billing_status==='current'?'selected':'')+'>Em dia</option><option value="overdue" '+(co.billing_status==='overdue'?'selected':'')+'>Em atraso</option><option value="cancelled" '+(co.billing_status==='cancelled'?'selected':'')+'>Cancelado</option></select></div></div><button type="button" data-save-company="'+safe(co.id)+'">Salvar alterações</button><span id="companySave_'+safe(co.id)+'" class="status"></span></div>').join('');
+  root.innerHTML='<div class="card section"><h3>Empresas clientes</h3><p class="muted">Visão geral dos restaurantes cadastrados no GestorPro. A administração dos planos e do status fica restrita ao proprietário.</p><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"><div class="card kpi"><small>Total de empresas</small><b>'+rows.length+'</b></div><div class="card kpi"><small>Ativas</small><b>'+rows.filter(x=>x.status==='active').length+'</b></div><div class="card kpi"><small>Suspensas</small><b>'+rows.filter(x=>x.status==='suspended').length+'</b></div></div>'+(cards||'<div class="empty">Nenhuma empresa cadastrada ainda.</div>')+'</div>';
+  root.querySelectorAll('[data-save-company]').forEach(btn=>btn.onclick=async()=>{
+   const id=btn.dataset.saveCompany,slot=$('companySave_'+id);btn.disabled=true;slot.textContent='Salvando...';slot.className='status';
+   try{
+    const result=await callPlatformAction({action:'update_company',company_id:id,status:root.querySelector('[data-company-status="'+id+'"]').value,plan:root.querySelector('[data-company-plan="'+id+'"]').value,billing_status:root.querySelector('[data-company-billing="'+id+'"]').value});
+    slot.textContent=result.message;slot.className='status green';await renderPlatformCompanies();
+   }catch(err){slot.textContent=err?.message||String(err);slot.className='status red';btn.disabled=false}
+  });
+ }catch(err){root.innerHTML='<div class="card section"><h3>Empresas clientes</h3><div class="status red">'+safe(err?.message||String(err))+'</div><button type="button" id="retryPlatformCompanies" class="secondary">Tentar novamente</button></div>';$('retryPlatformCompanies').onclick=()=>renderPlatformCompanies()}
+}
 async function renderPlatformStaff(){
  const root=$('platformStaffPanel');if(!root)return;
  root.innerHTML='<div class="card section"><h3>Equipe GestorPro</h3><p class="muted">Carregando administradores...</p></div>';
@@ -249,6 +266,7 @@ async function bootstrap(authSession=null){
   $('platformRoleLabel').textContent=p.profile?.role==='owner'?'Proprietário':'Administrador';
   $('platformStatus').textContent='Acesso validado com segurança. Esta sessão está independente de qualquer empresa cliente.';
   $('platformStatus').className='status green';
+  if(p.profile?.role==='owner'||p.profile?.permissions?.companies===true)renderPlatformCompanies();
   if(p.profile?.role==='owner'){
    $('platformStaffPanel').innerHTML='<div class="card section"><h3>Equipe GestorPro</h3><p class="muted">Carregando administradores...</p></div>';
    renderPlatformStaff().catch(err=>{const root=$('platformStaffPanel');if(root)root.innerHTML='<div class="card section"><div class="status red">Não foi possível carregar a equipe: '+safe(err?.message||String(err))+'</div></div>'});
