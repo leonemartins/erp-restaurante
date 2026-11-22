@@ -131,8 +131,16 @@ window.__gestorProAuthHandlerReady=true;
 async function renderPlatformStaff(){
  const root=$('platformStaffPanel');if(!root)return;
  root.innerHTML='<div class="card section"><h3>Equipe GestorPro</h3><p class="muted">Carregando administradores...</p></div>';
- const {data,error}=await supabase.functions.invoke('platform-owner',{body:{action:'list_staff'}});
- if(error||data?.error){root.innerHTML='<div class="card section"><div class="status red">'+safe(data?.error||error.message)+'</div></div>';return}
+ let data=null;
+ try{
+  const response=await fetch(SUPABASE_URL+'/functions/v1/platform-owner',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({action:'list_staff'}),cache:'no-store'});
+  data=await response.json().catch(()=>({error:'Resposta inválida do servidor.'}));
+  if(!response.ok||data?.error)throw new Error(data?.error||('HTTP '+response.status));
+ }catch(err){
+  root.innerHTML='<div class="card section"><h3>Equipe GestorPro</h3><div class="status red">Não foi possível carregar a equipe: '+safe(err?.message||String(err))+'</div><button type="button" id="retryPlatformStaff" class="secondary">Tentar novamente</button></div>';
+  $('retryPlatformStaff').onclick=()=>renderPlatformStaff();
+  return;
+ }
  const keys=data.permissionKeys||[],labels=data.permissionLabels||{},rows=data.staff||[];
  const checks=(p,prefix)=>keys.map(k=>'<label style="display:flex;gap:8px;align-items:center;margin:7px 12px 7px 0;font-weight:400"><input type="checkbox" data-perm="'+prefix+'" value="'+safe(k)+'" '+(p?.[k]===true?'checked':'')+' style="width:auto"> '+safe(labels[k]||k)+'</label>').join('');
  const cards=rows.map((r,i)=>{
