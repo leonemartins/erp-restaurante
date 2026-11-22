@@ -123,10 +123,47 @@ async function renderPlatformStaff(){
   if(out.error||out.data?.error){alert(out.data?.error||out.error.message);btn.disabled=false;return}await renderPlatformStaff();
  });
 }
-async function bootstrap(authSession=null){session=authSession||session;if(!session){show('authView');status('authStatus','Sessão não encontrada. Entre novamente.','red');return}
- const platformCheck=await supabase.functions.invoke('platform-owner',{body:{action:'bootstrap'}});
- if(!platformCheck.error&&platformCheck.data?.authorized){const p=platformCheck.data;show('platformView');$('platformUserLabel').textContent=p.profile?.email||session.user.email||'';$('platformCompaniesCount').textContent=Number(p.metrics?.companies||0).toLocaleString('pt-BR');$('platformStaffCount').textContent=Number(p.metrics?.platformStaff||0).toLocaleString('pt-BR');$('platformRoleLabel').textContent=p.profile?.role==='owner'?'Proprietário':'Administrador';$('platformStatus').textContent='Acesso validado com segurança. Esta sessão está independente de qualquer empresa cliente.';$('platformStatus').className='status green';if(p.profile?.role==='owner')await renderPlatformStaff();else $('platformStaffPanel').innerHTML='<div class="card section"><h3>Área administrativa</h3><p class="muted">Seu acesso está limitado às permissões concedidas pelo proprietário.</p></div>';return}
- const {data:mem,error}=await supabase.from('company_memberships').select('company_id,role,status,module_permissions,companies(id,name,owner_id)').eq('user_id',session.user.id);if(error){show('authView');status('authStatus','Não foi possível carregar seu acesso: '+error.message,'red');return}memberships=mem||[];const ownMembership=memberships.find(x=>x.company_id===memberships[0]?.company_id);if(ownMembership&&ownMembership.status!=='active'){show('authView');status('authStatus',ownMembership.status==='blocked'?'Acesso bloqueado. Procure o proprietário da empresa.':'Acesso inativo. Procure o proprietário da empresa.','red');await supabase.auth.signOut();session=null;return}window.gpModulePermissions=ownMembership?.module_permissions||{};isCompanyOwner=memberships.some(x=>x.company_id===memberships[0]?.company_id&&x.companies?.owner_id===session.user.id);if(!memberships.length){show('authView');status('authStatus','Esta conta ainda não possui acesso liberado. Solicite ao proprietário do GestorPro.','red');await supabase.auth.signOut();session=null;return}companyId=memberships[0].company_id;currentRole=memberships.find(x=>x.company_id===companyId)?.role||null;document.querySelectorAll('#nav [data-page]').forEach(b=>{const key=b.dataset.page;b.classList.toggle('hidden',!isCompanyOwner&&window.gpModulePermissions[key]!==true)});document.querySelector('[data-page="seguranca"]').classList.toggle('hidden',currentRole!=='admin'&&!isCompanyOwner);await loadUnits()}
+async function bootstrap(authSession=null){
+ session=authSession||session;
+ if(!session){show('authView');status('authStatus','Sessão não encontrada. Entre novamente.','red');return}
+ status('authStatus','Validando acesso à plataforma...');
+ let platformCheck;
+ try{
+  platformCheck=await Promise.race([
+   supabase.functions.invoke('platform-owner',{body:{action:'bootstrap'}}),
+   new Promise((_,reject)=>setTimeout(()=>reject(new Error('A validação da plataforma demorou mais que o esperado. Tente atualizar a página.')),12000))
+  ]);
+ }catch(err){
+  show('authView');status('authStatus','Login realizado, mas não foi possível concluir a validação do portal: '+(err?.message||String(err)),'red');return;
+ }
+ if(!platformCheck.error&&platformCheck.data?.authorized){
+  const p=platformCheck.data;
+  show('platformView');
+  $('platformUserLabel').textContent=p.profile?.email||session.user.email||'';
+  $('platformCompaniesCount').textContent=Number(p.metrics?.companies||0).toLocaleString('pt-BR');
+  $('platformStaffCount').textContent=Number(p.metrics?.platformStaff||0).toLocaleString('pt-BR');
+  $('platformRoleLabel').textContent=p.profile?.role==='owner'?'Proprietário':'Administrador';
+  $('platformStatus').textContent='Acesso validado com segurança. Esta sessão está independente de qualquer empresa cliente.';
+  $('platformStatus').className='status green';
+  if(p.profile?.role==='owner'){
+   $('platformStaffPanel').innerHTML='<div class="card section"><h3>Equipe GestorPro</h3><p class="muted">Carregando administradores...</p></div>';
+   renderPlatformStaff().catch(err=>{const root=$('platformStaffPanel');if(root)root.innerHTML='<div class="card section"><div class="status red">Não foi possível carregar a equipe: '+safe(err?.message||String(err))+'</div></div>'});
+  }else $('platformStaffPanel').innerHTML='<div class="card section"><h3>Área administrativa</h3><p class="muted">Seu acesso está limitado às permissões concedidas pelo proprietário.</p></div>';
+  return;
+ }
+ const {data:mem,error}=await supabase.from('company_memberships').select('company_id,role,status,module_permissions,companies(id,name,owner_id)').eq('user_id',session.user.id);
+ if(error){show('authView');status('authStatus','Não foi possível carregar seu acesso: '+error.message,'red');return}
+ memberships=mem||[];
+ const ownMembership=memberships.find(x=>x.company_id===memberships[0]?.company_id);
+ if(ownMembership&&ownMembership.status!=='active'){show('authView');status('authStatus',ownMembership.status==='blocked'?'Acesso bloqueado. Procure o proprietário da empresa.':'Acesso inativo. Procure o proprietário da empresa.','red');await supabase.auth.signOut();session=null;return}
+ window.gpModulePermissions=ownMembership?.module_permissions||{};
+ isCompanyOwner=memberships.some(x=>x.company_id===memberships[0]?.company_id&&x.companies?.owner_id===session.user.id);
+ if(!memberships.length){show('authView');status('authStatus','Esta conta ainda não possui acesso liberado. Solicite ao proprietário do GestorPro.','red');await supabase.auth.signOut();session=null;return}
+ companyId=memberships[0].company_id;currentRole=memberships.find(x=>x.company_id===companyId)?.role||null;
+ document.querySelectorAll('#nav [data-page]').forEach(b=>{const key=b.dataset.page;b.classList.toggle('hidden',!isCompanyOwner&&window.gpModulePermissions[key]!==true)});
+ document.querySelector('[data-page="seguranca"]').classList.toggle('hidden',currentRole!=='admin'&&!isCompanyOwner);
+ await loadUnits();
+}
 $('setupForm').addEventListener('submit',async e=>{e.preventDefault();if(!session){show('authView');return}status('setupStatus','Criando empresa...');const name=$('companyName').value.trim(),unitName=$('unitName').value.trim();const {data:company,error:ce}=await supabase.from('companies').insert({name,owner_id:session.user.id}).select('id,name').single();if(ce){status('setupStatus','Erro ao criar empresa: '+ce.message,'red');return}const {error:me}=await supabase.from('company_memberships').insert({company_id:company.id,user_id:session.user.id,role:'admin'});if(me){status('setupStatus','Empresa criada, mas não foi possível criar seu vínculo de administrador: '+me.message+'. Não tente criar outra empresa; peça suporte para corrigir o vínculo.','red');return}const {error:ue}=await supabase.from('units').insert({company_id:company.id,name:unitName,active:true});if(ue){status('setupStatus','Empresa e administrador criados, mas houve erro ao criar a unidade: '+ue.message+'. Entre novamente para continuar.','red');return}companyId=company.id;await loadUnits()});
 async function loadUnits(){let q=supabase.from('units').select('id,name,active').eq('company_id',companyId).eq('active',true).order('name');if(!isCompanyOwner){const {data:ua,error:uae}=await supabase.from('user_unit_access').select('unit_id').eq('company_id',companyId).eq('user_id',session.user.id);if(uae){show('authView');status('authStatus','Erro ao carregar unidades autorizadas: '+uae.message,'red');return}const ids=(ua||[]).map(x=>x.unit_id);q=ids.length?q.in('id',ids):q.eq('id','00000000-0000-0000-0000-000000000000')}const {data,error}=await q;if(error){show('authView');status('authStatus','Erro ao carregar unidades: '+error.message,'red');return}units=data||[];if(!units.length){show('setupView');status('setupStatus','Sua empresa não possui unidade ativa.');return}unitId=units[0].id;renderUnitSelect();$('userLabel').textContent=session.user.email||'';show('appView');await render()}
 function renderUnitSelect(){$('unitSelect').innerHTML=units.map(u=>`<option value="${u.id}">${safe(u.name)}</option>`).join('');$('unitSelect').value=unitId}
