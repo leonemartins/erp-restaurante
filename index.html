@@ -98,11 +98,23 @@ supabase.auth.onAuthStateChange((event)=>{
 (async()=>{
  const params=new URLSearchParams(location.search);
  const hashParams=new URLSearchParams(location.hash.replace(/^#/,''));
- const recovery=params.get('type')==='recovery'||hashParams.get('type')==='recovery'||params.has('token_hash');
+ const tokenHash=params.get('token_hash')||hashParams.get('token_hash');
+ const recovery=params.get('type')==='recovery'||hashParams.get('type')==='recovery'||!!tokenHash;
  if(!recovery)return;
+ if(tokenHash){
+  status('authStatus','Validando link seguro de redefinição...');
+  const verified=await supabase.auth.verifyOtp({token_hash:tokenHash,type:'recovery'});
+  if(verified.error){
+   status('authStatus','Este link de redefinição é inválido, expirou ou já foi utilizado. Gere um novo link pela Central do Proprietário. Detalhe: '+verified.error.message,'red');
+   return;
+  }
+  showPasswordRecovery();
+  status('authStatus','Link validado. Defina sua nova senha abaixo.','green');
+  return;
+ }
  const {data,error}=await supabase.auth.getSession();
  if(error||!data?.session){
-  status('authStatus','O link de redefinição foi aberto, mas a sessão de recuperação não foi validada. Gere um novo link pela Central do Proprietário e abra-o no mesmo navegador.','red');
+  status('authStatus','O link de redefinição não contém uma sessão válida. Gere um novo link pela Central do Proprietário.','red');
   return;
  }
  showPasswordRecovery();
