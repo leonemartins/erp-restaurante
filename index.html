@@ -171,7 +171,9 @@ async function bootstrap(authSession=null){
  status('authStatus','Validando acesso à plataforma...');
  let platformCheck;
  try{
-  platformCheck=await supabase.functions.invoke('platform-owner',{body:{action:'bootstrap'}});
+  const response=await fetch(SUPABASE_URL+'/functions/v1/platform-owner',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({action:'bootstrap'}),cache:'no-store'});
+  const payload=await response.json().catch(()=>({error:'Resposta inválida do servidor.'}));
+  platformCheck={data:payload,error:response.ok?null:{message:payload.error||('HTTP '+response.status)}};
  }catch(err){
   show('authView');status('authStatus','Login realizado, mas não foi possível concluir a validação do portal: '+(err?.message||String(err)),'red');return;
  }
