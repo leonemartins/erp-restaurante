@@ -210,25 +210,6 @@ async function renderPlatformCompanies(){
   });
  }catch(err){root.innerHTML='<div class="card section"><h3>Empresas clientes</h3><div class="status red">'+safe(err?.message||String(err))+'</div><button type="button" id="retryPlatformCompanies" class="secondary">Tentar novamente</button></div>';$('retryPlatformCompanies').onclick=()=>renderPlatformCompanies()}
 }
-async function renderPlatformBilling(){
- const root=$('platformBillingPanel');if(!root)return;
- root.innerHTML='<div class="card section"><h3>Assinaturas</h3>Carregando...</div>';
- try{
- const [b,companies]=await Promise.all([callPlatformAction({action:'billing_overview'}),callPlatformAction({action:'list_companies'})]);
- const rows=companies.companies||[],plans=b.plans||[],subs=b.subscriptions||[],payments=b.payments||[],today=new Date().toISOString().slice(0,10);
- const money=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
- const mrr=rows.filter(x=>x.status==='active'&&x.billing_status==='current').reduce((sum,x)=>{const s=subs.find(z=>z.company_id===x.id),p=plans.find(z=>z.code===x.plan);return sum+Number(s?.monthly_amount??p?.monthly_price??0)},0);
- const late=rows.filter(x=>x.billing_status==='overdue'||(subs.find(s=>s.company_id===x.id)?.next_due_at<today&&x.billing_status==='current')).length;
- const planCards=plans.filter(p=>p.code!=='trial').map(p=>'<div class="field"><label>'+safe(p.name)+' (R$/mês)</label><input type="number" min="0" step="0.01" data-price="'+p.code+'" value="'+(p.monthly_price??'')+'"><button data-save-price="'+p.code+'">Salvar preço</button></div>').join('');
- const cards=rows.map(co=>{const s=subs.find(x=>x.company_id===co.id)||{},hist=payments.filter(x=>x.company_id===co.id);
- return '<div class="card section" style="margin-top:12px"><h4>'+safe(co.name)+'</h4><p class="muted">Plano: '+safe(co.plan)+' · Financeiro: '+safe(co.billing_status)+'</p><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">'+[['start','Início',s.started_at],['due','Próximo vencimento',s.next_due_at],['trial','Fim da avaliação',s.trial_ends_at]].map(x=>'<div class="field"><label>'+x[1]+'</label><input type="date" data-'+x[0]+'="'+co.id+'" value="'+(x[2]||'')+'"></div>').join('')+'<div class="field"><label>Mensalidade (R$)</label><input type="number" min="0" step="0.01" data-amount="'+co.id+'" value="'+(s.monthly_amount??'')+'"></div></div><div class="field"><label>Observações</label><input maxlength="1000" data-notes="'+co.id+'" value="'+safe(s.notes||'')+'"></div><button data-save-sub="'+co.id+'">Salvar assinatura</button><h4>Registrar pagamento</h4><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))"><div class="field"><label>Data</label><input type="date" data-paid="'+co.id+'" value="'+today+'"></div><div class="field"><label>Valor (R$)</label><input type="number" min="0.01" step="0.01" data-payamount="'+co.id+'"></div><div class="field"><label>Referência</label><input maxlength="250" data-ref="'+co.id+'"></div></div><button class="secondary" data-save-pay="'+co.id+'">Registrar pagamento</button><p class="muted">Histórico: '+(hist.length?hist.slice(0,10).map(p=>safe(p.paid_at)+' · '+money(p.amount)+' · '+safe(p.reference||'')).join(' | '):'Nenhum pagamento registrado')+'</p><div class="status" id="billmsg_'+co.id+'"></div></div>'}).join('');
- root.innerHTML='<div class="card section"><h3>Assinaturas e faturamento</h3><p class="muted">Controle manual. Nenhum pagamento, cobrança ou suspensão é automático.</p><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"><div class="card kpi"><small>MRR estimado de empresas ativas em dia</small><b>'+money(mrr)+'</b></div><div class="card kpi"><small>Atrasos e vencimentos ultrapassados</small><b>'+late+'</b></div><div class="card kpi"><small>Pagamentos no histórico</small><b>'+payments.length+'</b></div></div><h4>Preços dos planos</h4><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">'+planCards+'</div><div id="billPriceMsg" class="status"></div><h4>Assinaturas por empresa</h4>'+cards+'</div>';
- const v=(key,id)=>root.querySelector('[data-'+key+'="'+id+'"]').value;
- root.querySelectorAll('[data-save-price]').forEach(btn=>btn.onclick=async()=>{btn.disabled=true;try{await callPlatformAction({action:'save_plan_price',code:btn.dataset.savePrice,monthly_price:v('price',btn.dataset.savePrice)});await renderPlatformBilling()}catch(e){$('billPriceMsg').textContent=e.message;btn.disabled=false}});
- root.querySelectorAll('[data-save-sub]').forEach(btn=>btn.onclick=async()=>{const id=btn.dataset.saveSub;btn.disabled=true;try{await callPlatformAction({action:'save_subscription',company_id:id,started_at:v('start',id),next_due_at:v('due',id),trial_ends_at:v('trial',id),monthly_amount:v('amount',id),notes:v('notes',id)});await renderPlatformBilling()}catch(e){$('billmsg_'+id).textContent=e.message;btn.disabled=false}});
- root.querySelectorAll('[data-save-pay]').forEach(btn=>btn.onclick=async()=>{const id=btn.dataset.savePay;btn.disabled=true;try{await callPlatformAction({action:'record_payment',company_id:id,paid_at:v('paid',id),amount:v('payamount',id),reference:v('ref',id)});await renderPlatformBilling()}catch(e){$('billmsg_'+id).textContent=e.message;btn.disabled=false}});
- }catch(e){root.innerHTML='<div class="card section"><h3>Assinaturas</h3><p class="status red">'+safe(e?.message||String(e))+'</p><button id="retryBilling" class="secondary">Tentar novamente</button></div>';$('retryBilling').onclick=renderPlatformBilling}
-}
 async function renderPlatformStaff(){
  const root=$('platformStaffPanel');if(!root)return;
  root.innerHTML='<div class="card section"><h3>Equipe GestorPro</h3><p class="muted">Carregando administradores...</p></div>';
@@ -303,7 +284,7 @@ async function bootstrap(authSession=null){
   $('platformStatus').className='status green';
   if(p.profile?.role==='owner'||p.profile?.permissions?.billing===true)renderPlatformBilling();
   if(p.profile?.role==='owner'||p.profile?.permissions?.companies===true)renderPlatformCompanies();
-  if(p.profile?.role==='owner'||p.profile?.permissions?.billing===true)renderPlatformBilling();
+
   if(p.profile?.role==='owner'){
    $('platformStaffPanel').innerHTML='<div class="card section"><h3>Equipe GestorPro</h3><p class="muted">Carregando administradores...</p></div>';
    renderPlatformStaff().catch(err=>{const root=$('platformStaffPanel');if(root)root.innerHTML='<div class="card section"><div class="status red">Não foi possível carregar a equipe: '+safe(err?.message||String(err))+'</div></div>'});
