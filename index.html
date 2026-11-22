@@ -167,6 +167,16 @@ document.addEventListener('submit',async ev=>{
 window.__gestorProAuthHandlerReady=true;
 
 
+async function callPlatformAction(payload){
+ const response=await fetch(SUPABASE_URL+'/functions/v1/platform-owner',{
+  method:'POST',
+  headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},
+  body:JSON.stringify(payload),cache:'no-store'
+ });
+ const data=await response.json().catch(()=>({error:'Resposta inválida do servidor.'}));
+ if(!response.ok||data?.error)throw new Error(data?.error||('HTTP '+response.status));
+ return data;
+}
 async function renderPlatformStaff(){
  const root=$('platformStaffPanel');if(!root)return;
  root.innerHTML='<div class="card section"><h3>Equipe GestorPro</h3><p class="muted">Carregando administradores...</p></div>';
@@ -190,13 +200,15 @@ async function renderPlatformStaff(){
  const readPerm=prefix=>Object.fromEntries([...root.querySelectorAll('input[data-perm="'+prefix+'"]')].map(x=>[x.value,x.checked]));
  const invite=$('platformInviteForm');
  invite.onsubmit=async e=>{e.preventDefault();const fd=new FormData(invite);const btn=invite.querySelector('button[type=submit]');btn.disabled=true;const st=$('platformInviteStatus');st.textContent='Processando convite...';st.className='status';
-  const out=await supabase.functions.invoke('platform-owner',{body:{action:'invite_admin',email:String(fd.get('email')||'').trim(),display_name:String(fd.get('display_name')||'').trim(),permissions:readPerm('new')}});
-  if(out.error||out.data?.error){st.textContent=out.data?.error||out.error.message;st.className='status red';btn.disabled=false;return}
-  st.textContent=out.data.message;st.className='status green';invite.reset();await renderPlatformStaff();
+  try{
+   const out=await callPlatformAction({action:'invite_admin',email:String(fd.get('email')||'').trim(),display_name:String(fd.get('display_name')||'').trim(),permissions:readPerm('new')});
+   st.textContent=out.message;st.className='status green';invite.reset();await renderPlatformStaff();
+  }catch(err){st.textContent=err?.message||String(err);st.className='status red';btn.disabled=false}
  };
  root.querySelectorAll('[data-save-admin]').forEach(btn=>btn.onclick=async()=>{
-  btn.disabled=true;const out=await supabase.functions.invoke('platform-owner',{body:{action:'update_admin',user_id:btn.dataset.saveAdmin,permissions:readPerm(btn.dataset.prefix)}});
-  if(out.error||out.data?.error){alert(out.data?.error||out.error.message);btn.disabled=false;return}alert(out.data.message);await renderPlatformStaff();
+  btn.disabled=true;
+  try{const out=await callPlatformAction({action:'update_admin',user_id:btn.dataset.saveAdmin,permissions:readPerm(btn.dataset.prefix)});alert(out.message);await renderPlatformStaff()}
+  catch(err){alert(err?.message||String(err));btn.disabled=false}
  });
  root.querySelectorAll('[data-recovery-email]').forEach(btn=>btn.onclick=async()=>{
   btn.disabled=true;const slot=btn.closest('.card')?.querySelector('[id^="recoveryLink_"]');
@@ -211,8 +223,9 @@ async function renderPlatformStaff(){
  });
  root.querySelectorAll('[data-status-admin]').forEach(btn=>btn.onclick=async()=>{
   const next=btn.dataset.next;if(!confirm(next==='suspended'?'Confirma suspender este administrador?':'Confirma reativar este administrador?'))return;
-  btn.disabled=true;const out=await supabase.functions.invoke('platform-owner',{body:{action:'set_admin_status',user_id:btn.dataset.statusAdmin,status:next}});
-  if(out.error||out.data?.error){alert(out.data?.error||out.error.message);btn.disabled=false;return}await renderPlatformStaff();
+  btn.disabled=true;
+  try{await callPlatformAction({action:'set_admin_status',user_id:btn.dataset.statusAdmin,status:next});await renderPlatformStaff()}
+  catch(err){alert(err?.message||String(err));btn.disabled=false}
  });
 }
 async function bootstrap(authSession=null){
