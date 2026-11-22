@@ -162,9 +162,12 @@ async function renderPlatformStaff(){
  root.querySelectorAll('[data-recovery-email]').forEach(btn=>btn.onclick=async()=>{
   btn.disabled=true;const slot=btn.closest('.card')?.querySelector('[id^="recoveryLink_"]');
   if(slot){slot.textContent='Gerando link seguro...';slot.className='status'}
-  const out=await supabase.functions.invoke('platform-owner',{body:{action:'generate_recovery_link',email:btn.dataset.recoveryEmail}});
-  if(out.error||out.data?.error){if(slot){slot.textContent=out.data?.error||out.error.message;slot.className='status red'}btn.disabled=false;return}
-  if(slot){slot.innerHTML='<span class="green">'+safe(out.data.message)+'</span><br><a href="'+safe(out.data.action_link)+'" target="_blank" rel="noopener">Abrir link para definir senha</a>';slot.className='status green'}
+  try{
+   const response=await fetch(SUPABASE_URL+'/functions/v1/platform-owner',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({action:'generate_recovery_link',email:btn.dataset.recoveryEmail}),cache:'no-store'});
+   const result=await response.json().catch(()=>({error:'Resposta inválida do servidor.'}));
+   if(!response.ok||result?.error)throw new Error(result?.error||('HTTP '+response.status));
+   if(slot){slot.innerHTML='<span class="green">'+safe(result.message)+'</span><br><a href="'+safe(result.action_link)+'" target="_blank" rel="noopener">Abrir link para definir senha</a>';slot.className='status green'}
+  }catch(err){if(slot){slot.textContent='Não foi possível gerar o link: '+(err?.message||String(err));slot.className='status red'}}
   btn.disabled=false;
  });
  root.querySelectorAll('[data-status-admin]').forEach(btn=>btn.onclick=async()=>{
