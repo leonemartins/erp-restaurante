@@ -9,3 +9,6 @@ alter table public.companies
     check (billing_status in ('trial','current','overdue','cancelled'));
 alter table public.companies add column if not exists trial_ends_at timestamptz;
 alter table public.companies add column if not exists updated_at timestamptz not null default now();
+
+-- Permite que a função administrativa segura atualize os dados SaaS das empresas.
+grant update on table public.companies to service_role;
