@@ -24,7 +24,7 @@ rap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12p
  <main class="content"><div class="pagehead"><div><h1>Central do Proprietário</h1><div class="sub">Administração central da plataforma GestorPro, independente das empresas clientes.</div></div><span class="pill">Acesso proprietário</span></div>
  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))"><div class="card kpi"><small>Empresas cadastradas</small><b id="platformCompaniesCount">—</b></div><div class="card kpi"><small>Contas da equipe GestorPro</small><b id="platformStaffCount">—</b></div><div class="card kpi"><small>Perfil conectado</small><b id="platformRoleLabel" style="font-size:18px">Proprietário</b></div></div>
  <div class="card section"><h3>Controle da plataforma</h3><p class="muted">Sua conta proprietária é separada dos acessos dos restaurantes. Somente ela pode convidar, alterar permissões e suspender administradores.</p><div class="notice">Administradores delegados não podem alterar, suspender ou substituir a conta proprietária.</div></div>
- <div id="platformBillingPanel"></div><div id="platformCompaniesPanel"></div><div id="platformBillingPanel"></div><div id="platformStaffPanel"></div><div id="platformStatus" class="status"></div></main>
+ <div id="platformOnboardingPanel"></div><div id="platformBillingPanel"></div><div id="platformCompaniesPanel"></div><div id="platformBillingPanel"></div><div id="platformStaffPanel"></div><div id="platformStatus" class="status"></div></main>
 </div>
 <div id="appView" class="shell hidden">
  <aside class="sidebar"><div class="brand">GESTORPRO<small>ERP RESTAURANTE</small></div><div class="navlabel">Gestão</div><nav class="nav" id="nav"><button class="active" data-page="dashboard">▦ &nbsp; Dashboard</button><button data-page="cadastros">♙ &nbsp; Cadastros</button><button data-page="estoque">▣ &nbsp; Estoque</button><button data-page="compras">🛒 &nbsp; Compras</button><button data-page="recebimentos">📦 &nbsp; Recebimentos</button><button data-page="custos">💰 &nbsp; CMV e Custos</button><button data-page="faturamento">💵 &nbsp; Faturamento e Ticket Médio</button><button data-page="nutricao">🥗 &nbsp; Nutrição</button><button data-page="qualidade">🛡 &nbsp; Qualidade e segurança</button><button data-page="manutencao">🔧 &nbsp; Manutenção e patrimônio</button><button data-page="rh">♙ &nbsp; Recursos Humanos</button><button data-page="relatorios">📊 &nbsp; Relatórios e auditoria</button><button data-page="alertas">🔔 &nbsp; Central de alertas</button><button data-page="aprovacoes">✓ &nbsp; Centro de aprovações</button><button data-page="notificacoes">✉ &nbsp; Notificações</button><button data-page="seguranca">🔐 &nbsp; Segurança e acessos</button><button data-page="operacao">☑ &nbsp; Operações</button></nav><div class="navlabel">Sistema</div><nav class="nav"><button data-page="ajuda">⚙ &nbsp; Sobre o sistema</button></nav></aside>
@@ -178,6 +178,19 @@ async function callPlatformAction(payload){
  return data;
 }
 
+async function renderPlatformOnboarding(){
+ const root=$('platformOnboardingPanel');if(!root)return;
+ root.innerHTML='<div class="card section"><h3>Onboarding de novas empresas</h3><p class="muted">Cadastre uma empresa cliente, sua primeira unidade e o administrador responsável.</p><form id="customerOnboardingForm"><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))"><div class="field"><label>Nome da empresa *</label><input id="onboardCompany" maxlength="120" required placeholder="Razão ou nome de exibição"></div><div class="field"><label>Primeira unidade *</label><input id="onboardUnit" maxlength="120" required placeholder="Ex.: Unidade Matriz"></div><div class="field"><label>Nome do administrador</label><input id="onboardAdminName" maxlength="100" placeholder="Responsável pela empresa"></div><div class="field"><label>E-mail do administrador *</label><input id="onboardAdminEmail" type="email" required placeholder="responsavel@empresa.com"></div></div><p class="muted">Se o e-mail ainda não possuir conta, o GestorPro enviará um convite. Se já existir, a conta será vinculada à nova empresa como administradora.</p><button id="onboardSubmit" type="submit">Criar empresa e enviar acesso</button><div id="onboardStatus" class="status" role="status"></div></form></div>';
+ $('customerOnboardingForm').addEventListener('submit',async e=>{
+  e.preventDefault();const b=$('onboardSubmit'),s=$('onboardStatus');b.disabled=true;s.textContent='Criando empresa, unidade e acesso...';s.className='status';
+  try{
+   const result=await callPlatformAction({action:'create_customer_company',company_name:$('onboardCompany').value,unit_name:$('onboardUnit').value,admin_name:$('onboardAdminName').value,admin_email:$('onboardAdminEmail').value});
+   s.textContent=result.message;s.className='status green';$('customerOnboardingForm').reset();
+   if(typeof renderPlatformCompanies==='function')await renderPlatformCompanies();
+  }catch(err){s.textContent=err?.message||String(err);s.className='status red'}
+  finally{b.disabled=false}
+ });
+}
 async function renderPlatformBilling(){
  const root=$('platformBillingPanel'); if(!root)return;
  root.innerHTML='<div class="card section"><h3>Assinaturas e faturamento</h3><p class="muted">Carregando...</p></div>';
@@ -283,6 +296,7 @@ async function bootstrap(authSession=null){
   $('platformRoleLabel').textContent=p.profile?.role==='owner'?'Proprietário':'Administrador';
   $('platformStatus').textContent='Acesso validado com segurança. Esta sessão está independente de qualquer empresa cliente.';
   $('platformStatus').className='status green';
+  if(p.profile?.role==='owner')renderPlatformOnboarding();
   if(p.profile?.role==='owner'||p.profile?.permissions?.billing===true)renderPlatformBilling();
   if(p.profile?.role==='owner'||p.profile?.permissions?.companies===true)renderPlatformCompanies();
 
