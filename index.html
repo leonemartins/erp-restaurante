@@ -273,7 +273,8 @@ async function bootstrap(authSession=null){
  }catch(err){
   show('authView');status('authStatus','Login realizado, mas não foi possível concluir a validação do portal: '+(err?.message||String(err)),'red');return;
  }
- if(!platformCheck.error&&platformCheck.data?.authorized){
+ const companyPortalMode=new URLSearchParams(location.search).get('portal')==='empresa';
+ if(!companyPortalMode&&!platformCheck.error&&platformCheck.data?.authorized){
   const p=platformCheck.data;
   show('platformView');
   $('platformUserLabel').textContent=p.profile?.email||session.user.email||'';
