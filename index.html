@@ -139,12 +139,24 @@ document.addEventListener('submit',async ev=>{
  st.textContent='Atualizando sua senha com segurança...';
  st.className='status';
  try{
-  const result=await supabase.auth.updateUser({password});
-  if(result.error) throw result.error;
+  const activeSession=(await supabase.auth.getSession()).data?.session;
+  if(!activeSession?.access_token)throw new Error('A sessão de recuperação expirou. Gere um novo link e abra-o novamente.');
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),15000);
+  let response;
+  try{
+   response=await fetch(SUPABASE_URL+'/auth/v1/user',{method:'PUT',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+activeSession.access_token},body:JSON.stringify({password}),signal:controller.signal,cache:'no-store'});
+  }catch(networkError){
+   if(networkError?.name==='AbortError')throw new Error('O servidor demorou mais de 15 segundos para responder. Tente novamente uma vez.');
+   throw networkError;
+  }finally{clearTimeout(timeout)}
+  const payload=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(payload.msg||payload.message||payload.error_description||payload.error||('Falha HTTP '+response.status));
   st.textContent='Senha atualizada com sucesso. Agora você já pode entrar com a nova senha.';
   st.className='status green';
   form.reset();
   btn.textContent='Senha salva';
+  btn.disabled=true;
  }catch(err){
   st.textContent='Não foi possível atualizar a senha: '+(err&&err.message?err.message:String(err));
   st.className='status red';
