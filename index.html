@@ -171,10 +171,7 @@ async function bootstrap(authSession=null){
  status('authStatus','Validando acesso à plataforma...');
  let platformCheck;
  try{
-  platformCheck=await Promise.race([
-   supabase.functions.invoke('platform-owner',{body:{action:'bootstrap'}}),
-   new Promise((_,reject)=>setTimeout(()=>reject(new Error('A validação da plataforma demorou mais que o esperado. Tente atualizar a página.')),12000))
-  ]);
+  platformCheck=await supabase.functions.invoke('platform-owner',{body:{action:'bootstrap'}});
  }catch(err){
   show('authView');status('authStatus','Login realizado, mas não foi possível concluir a validação do portal: '+(err?.message||String(err)),'red');return;
  }
@@ -182,8 +179,8 @@ async function bootstrap(authSession=null){
   const p=platformCheck.data;
   show('platformView');
   $('platformUserLabel').textContent=p.profile?.email||session.user.email||'';
-  $('platformCompaniesCount').textContent=Number(p.metrics?.companies||0).toLocaleString('pt-BR');
-  $('platformStaffCount').textContent=Number(p.metrics?.platformStaff||0).toLocaleString('pt-BR');
+  $('platformCompaniesCount').textContent=p.metrics?.companies==null?'—':Number(p.metrics.companies).toLocaleString('pt-BR');
+  $('platformStaffCount').textContent=p.metrics?.platformStaff==null?'—':Number(p.metrics.platformStaff).toLocaleString('pt-BR');
   $('platformRoleLabel').textContent=p.profile?.role==='owner'?'Proprietário':'Administrador';
   $('platformStatus').textContent='Acesso validado com segurança. Esta sessão está independente de qualquer empresa cliente.';
   $('platformStatus').className='status green';
