@@ -4,7 +4,16 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const secretKeysRaw = Deno.env.get("SUPABASE_SECRET_KEYS");
 const secretKey = secretKeysRaw ? (JSON.parse(secretKeysRaw)["default"] as string) : Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 if (!secretKey) throw new Error("Chave administrativa do Supabase não configurada.");
-const admin = createClient(Deno.env.get("SUPABASE_URL")!, secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+const adminFetch: typeof fetch = (input, init) => {
+  const headers = new Headers(init?.headers);
+  // Supabase secret API keys are not JWTs: send them as apikey only, never as Bearer.
+  if (headers.get("Authorization") === `Bearer ${secretKey}`) headers.delete("Authorization");
+  return fetch(input, { ...init, headers });
+};
+const admin = createClient(Deno.env.get("SUPABASE_URL")!, secretKey, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  global: { fetch: adminFetch },
+});
 const graphVersion = Deno.env.get("WHATSAPP_GRAPH_API_VERSION") || "v27.0";
 const normalizePhone = (value: string) => { let digits = String(value || "").replace(/\D/g, ""); if (digits.length === 10 || digits.length === 11) digits = "55" + digits; return digits; };
 async function validSignature(raw: string, signature: string | null) {
