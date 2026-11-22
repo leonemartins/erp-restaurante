@@ -35,7 +35,7 @@ window.__gestorProModuleLoaded=false;
 window.__gestorProAuthHandlerReady=false;
 // Impede que o formulário faça um POST/recarregamento se o módulo não inicializar.
 document.addEventListener('submit',function(e){if(e.target&&e.target.id==='authForm'){e.preventDefault();if(!window.__gestorProAuthHandlerReady){var el=document.getElementById('authStatus');if(el&&!el.textContent.trim()){el.textContent='O módulo de login ainda está inicializando. Aguarde alguns segundos e atualize a página. Nenhum dado foi enviado.';el.className='status red';}}}},true);
-window.addEventListener('error',function(e){var el=document.getElementById('authStatus');if(el&&!window.__gestorProModuleLoaded){el.textContent='O sistema não conseguiu carregar o módulo de acesso. Atualize o arquivo index.html no GitHub e tente novamente. Detalhe: '+(e.message||'erro de carregamento');el.className='status red';}});
+window.addEventListener('error',function(e){var el=document.getElementById('authStatus');if(el&&!window.__gestorProModuleLoaded){var where=(e.filename||'arquivo desconhecido')+(e.lineno?':'+e.lineno+':'+(e.colno||0):'');el.textContent='Falha ao iniciar o GestorPro. Detalhe: '+(e.message||'erro de carregamento')+' · Local: '+where;el.className='status red';}});
 window.addEventListener('unhandledrejection',function(e){var el=document.getElementById('authStatus');if(el){el.textContent='Falha de comunicação: '+(e.reason&&e.reason.message?e.reason.message:String(e.reason));el.className='status red';}});
 </script>
 <script>
