@@ -79,6 +79,60 @@ html[data-theme="dark"] .authbrand,body[data-theme="dark"] .authbrand{color:#e9e
 html[data-theme="dark"] .empty,body[data-theme="dark"] .empty{color:var(--muted)}
 html[data-theme="dark"] .section,body[data-theme="dark"] .section,html[data-theme="dark"] .status,body[data-theme="dark"] .status{color:var(--text)}
 
+
+/* Corporate Premium — padronização visual transversal dos módulos */
+#app{color:var(--text);min-width:0}
+#app .pagehead{padding:0 0 16px;border-bottom:1px solid var(--line);margin:4px 0 22px}
+#app .pagehead h1{font-size:clamp(21px,2.2vw,27px);font-weight:800;letter-spacing:-.035em;color:var(--navy)}
+#app .pagehead .sub,#app .pagehead .muted{font-size:13px;line-height:1.55;max-width:760px}
+#app .section{min-width:0}
+#app .section>h2{font-size:18px;font-weight:780;letter-spacing:-.025em;margin:0 0 7px}
+#app .section>h3,#app .card>h3{font-size:15px;font-weight:750;letter-spacing:-.015em}
+#app .card{min-width:0;border-radius:14px;border-color:var(--line);box-shadow:0 4px 16px #14243a08;transition:border-color .18s,box-shadow .18s}
+#app .card:hover{border-color:color-mix(in srgb,var(--gold) 42%,var(--line));box-shadow:0 7px 22px #14243a0d}
+#app .toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0 16px}
+#app .toolbar button,#app .authactions button{width:auto;min-height:37px;padding:9px 13px;border-radius:9px;font-size:12px;font-weight:700;text-align:center}
+#app button{transition:filter .16s,transform .16s,box-shadow .16s}
+#app button:hover{filter:brightness(1.04);box-shadow:0 3px 10px #14243a16}
+#app button:active{transform:translateY(1px)}
+#app button.secondary{background:#edf1f6;color:#26384d;border:1px solid #dce3ec}
+#app .field{margin:12px 0}
+#app .field label{font-size:11px;font-weight:750;letter-spacing:.025em;color:var(--muted)}
+#app input:not([type=checkbox]):not([type=radio]):not([type=file]),#app select,#app textarea{width:100%;min-width:0;min-height:39px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--text);font:inherit;font-size:13px;outline:none;transition:border-color .16s,box-shadow .16s}
+#app input:focus,#app select:focus,#app textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--gold) 18%,transparent)}
+#app input[type=checkbox],#app input[type=radio]{accent-color:var(--gold)}
+#app textarea{min-height:92px;resize:vertical}
+#app .tablewrap{max-width:100%;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card);box-shadow:0 3px 12px #14243a06}
+#app table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;font-size:12px}
+#app th{position:sticky;top:0;z-index:1;padding:12px 13px;background:#f3f6fa;color:#53647a;font-size:10px;font-weight:800;letter-spacing:.055em;border-bottom:1px solid var(--line);white-space:nowrap}
+#app td{padding:11px 13px;line-height:1.45;border-bottom:1px solid color-mix(in srgb,var(--line) 78%,transparent);vertical-align:middle}
+#app tbody tr:last-child td{border-bottom:0}
+#app tbody tr:hover td{background:color-mix(in srgb,var(--gold) 5%,var(--card))}
+#app .pill{font-weight:750;letter-spacing:.01em;border:1px solid color-mix(in srgb,var(--gold) 20%,transparent)}
+#app .notice{border-radius:11px;line-height:1.55}
+#app .empty{padding:30px 18px;border:1px dashed var(--line);border-radius:10px;background:color-mix(in srgb,var(--card) 85%,var(--bg))}
+#app .grid{align-items:stretch}
+#app .grid>.card{height:100%}
+#app .status{padding:10px 12px;border-radius:9px;background:color-mix(in srgb,var(--bg) 78%,var(--card))}
+html[data-theme="dark"] #app .card,body[data-theme="dark"] #app .card{background:var(--card);box-shadow:0 5px 18px #00000018}
+html[data-theme="dark"] #app button.secondary,body[data-theme="dark"] #app button.secondary{background:#26364a;color:#e6edf6;border-color:#3a4a5e}
+html[data-theme="dark"] #app th,body[data-theme="dark"] #app th{background:#202e40;color:#c1ccda}
+html[data-theme="dark"] #app tbody tr:hover td,body[data-theme="dark"] #app tbody tr:hover td{background:#2a2b2b}
+html[data-theme="dark"] #app .empty,body[data-theme="dark"] #app .empty{background:#172333;border-color:#344357}
+@media(max-width:760px){
+ #app .pagehead{display:block;padding-bottom:13px;margin-bottom:17px}
+ #app .pagehead>div:last-child{margin-top:10px}
+ #app .toolbar{align-items:stretch}
+ #app .toolbar button{flex:1 1 auto}
+ #app .card{padding:15px}
+ #app .tablewrap{border-radius:10px}
+ #app th,#app td{padding:10px}
+}
+@media(max-width:420px){
+ #app .toolbar button{flex:1 1 100%}
+ #app .field{margin:10px 0}
+}
+
 </style>
 </head>
 <body>
